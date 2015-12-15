@@ -220,6 +220,16 @@ class SExtractorfile:
                                   "infunc": float,
                                   "format": "%8.4f",
                                   "unit": "mag"},
+              "MAG_APER"       : {"comment":
+                                  "# Magnitude Aperture",
+                                  "infunc": float,
+                                  "format": "%2.4f",
+                                  "unit": "mag"},                                  
+              "MAG_APER(1)"    : {"comment":
+                                  "# Magnitude Aperture",
+                                  "infunc": float,
+                                  "format": "%2.4f",
+                                  "unit": "mag"},
 
               "FLUX_AUTO"      : {"comment":
                                   "Flux within a Kron-like elliptical aperture",

@@ -150,10 +150,11 @@ import __builtin__
 import copy
 import os
 import popen2
+import subprocess
 import re
-
+import numpy as np
 from sexcatalog import *
-
+from astropy.io import fits
 
 # ======================================================================
 
@@ -274,11 +275,17 @@ class SExtractor:
         "PHOT_AUTOPARAMS":
         {"comment": 'MAG_AUTO parameters: <Kron_fact>,<min_radius>',
          "value": [2.5, 3.5]},
-        
+
+        "PHOT_PETROPARAMS":
+        {"comment": 'MAG_PETRO parameters: <Petrosian_fact>,<min_radius>',
+         "value": [2.0, 3.5]},        
+         
+         
         "SATUR_LEVEL":
         {"comment": "level (in ADUs) at which arises saturation",
-         "value": 50000.0},
-        
+         "value": 50000},         
+         
+
         "MAG_ZEROPOINT":
         {"comment": "magnitude zero-point",
          "value": 0.0},
@@ -366,8 +373,17 @@ class SExtractor:
         {"comment": 'Array to put in the FILTER_MASK file',
          "value": [[1, 2, 1],
                    [2, 4, 2],
-                   [1, 2, 1]]}
-        }
+                   [1, 2, 1]]},
+        
+        "WRITE_XML":
+            {"comment": "Write XML file (Y/N)?",
+             "value": "N"},
+             
+        "XML_NAME":
+            {"comment": "Filename for XML output",
+             "value": "sex.xml"}
+             
+             }
 
     
     # -- Special config. keys that should not go into the config. file.
@@ -408,7 +424,6 @@ class SExtractor:
         # first look for 'sextractor', then 'sex'
 
         candidates = ['sextractor', 'sex']
-
         if (path):
             candidates = [path]
         
@@ -495,12 +510,11 @@ class SExtractor:
         for key in self.config.keys():
             if (key in SExtractor._SE_config_special_keys):
                 continue
-
-            if (key == "PHOT_AUTOPARAMS"): # tuple instead of a single value
-                value = " ".join(map(str, self.config[key]))
+            value = self.config[key]
+            if (type(value) in [list,tuple]):
+                value = ", ".join(map(str, self.config[key]))
             else:
                 value = str(self.config[key])
-            
             
             print >>main_f, ("%-16s       %-16s # %s" %
                              (key, value, SExtractor._SE_config[key]['comment']))
@@ -508,7 +522,7 @@ class SExtractor:
         main_f.close()
 
 
-    def run(self, file, updateconfig=True, clean=False, path=None):
+    def run(self, filename, updateconfig=True, clean=True, path=None):
         """
         Run SExtractor.
 
@@ -528,20 +542,37 @@ class SExtractor:
 
         self.program, self.version = self.setup(path)
 
-        commandline = (
-            self.program + " -c " + self.config['CONFIG_FILE'] + " " + file)
+        commandline = (self.program + " -c " + self.config['CONFIG_FILE'] + " " + filename)
         # print commandline
 
-        rcode = os.system(commandline)
-
-        if (rcode):
-            raise SExtractorException, \
-                  "SExtractor command [%s] failed." % commandline
+        try:
+            output = subprocess.check_output(commandline, stderr=subprocess.STDOUT, shell=True)
+        except Exception:
+            raise SExtractorException("SExtractor command [%s] failed." % commandline)
             
+            
+        d = self.getData(filename)
+        d['output'] = output
+        
         if clean:
-            self.clean()
-
-
+            self.clean(config=True, catalog=True, check=True)
+            
+        return d
+        
+    def getData(self, filename):
+        c = self.catalog()
+        imagesFits = [fits.open(a)[0].data for a in self.config['CHECKIMAGE_NAME']]
+        imageTypes = self.config['CHECKIMAGE_TYPE']
+        imagesFits.append(fits.open(filename)[0].data)
+        imageTypes.append("ORIGINAL")
+        images = dict(zip(imageTypes, imagesFits))
+        
+        return {'catalog': c, 'images':images, "sex": self}
+        
+        
+        
+        
+        
 
     def catalog(self):
         """
@@ -550,10 +581,10 @@ class SExtractor:
         each star: {'param1': value, 'param2': value, ...}.
         """
 
-        output_f = SExtractorfile(self.config['CATALOG_NAME'], 'r')
-        c = output_f.read()
-        output_f.close()
-
+        #output_f = SExtractorfile(self.config['CATALOG_NAME'], 'r')
+        #c = output_f.read()
+        #output_f.close()
+        c = np.loadtxt(self.config['CATALOG_NAME'], dtype=[(a, 'float') for a in self.config['PARAMETERS_LIST']])
         return c
 
 
@@ -574,7 +605,11 @@ class SExtractor:
             if (catalog):
                 os.unlink(self.config['CATALOG_NAME'])
             if (check):
-                os.unlink(self.config['CHECKIMAGE_NAME'])
+                if type(self.config['CHECKIMAGE_NAME'] in [list, tuple]):
+                    for n in self.config['CHECKIMAGE_NAME']:
+                        os.unlink(n);
+                else:
+                    os.unlink(self.config['CHECKIMAGE_NAME'])
                 
         except OSError:
             pass
