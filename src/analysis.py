@@ -7,10 +7,16 @@ from astropy.io import fits
 from scipy.ndimage.filters import *
 import copy
 import scipy
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+from skimage.transform import resize
+from time import time
+
 
 debugFlag = True
+debugPlot = True
 sexPath = '/Users/shinton/Software/Ureka/bin/sex'
 fitsPath = "../resources/clarisse+sky.fits"
+cmap = "Blues_r"
 
 def debug(msg):
     if debugFlag:
@@ -59,57 +65,126 @@ def getInitialObjects():
     data = sex.run(imageName, path=sexPath)
     return data
 
-
-def broadClean(filename, redo=False, fast=False):
-    outputName = "../resources/clarisseBroadClean.fits"
-    if not redo and os.path.isfile(outputName):
-        try:
-            f = fits.open(outputName)
-            debug("Loaded existing file at %s" % outputName)
-            return (outputName, f[0].data)
-        except Exception:
-            debug("Previous file at %s not found" % outputName)
-    debug("Generating broad clean fits file")
-    fitsFile = fits.open(filename)
-    image = fitsFile[0].data
-    originalSize = image.size
-    s = 100
-    
-    if fast:
-        ratio = 0.25
-        debug("Fast option selected. Reducing resolution by factor of %0.2f" % (1/ratio))
-        s = np.ceil(s * ratio)
-        image = scipy.misc.imresize(image, ratio, interp="nearest")
-        
-    y = np.arange(-s+1,s)[:,np.newaxis]
-    x = np.arange(-s+1,s)[np.newaxis,:]
-    r = np.sqrt(x*x + y*y)
-    fil = ((r < s) & (r > np.floor(s * 0.7)))
-    
-    filterImage = median_filter(image, footprint=fil)
-    
-    if fast:
-        debug("Expanding image to original size")
-        filterImage = scipy.misc.imresize(filterImage, originalSize)
-    
+def getDefaultImgComparison():
     fig = plt.figure(figsize=(14,10))
     ax0 = fig.add_subplot(1,2,1)
     ax1 = fig.add_subplot(1,2,2)
     ax0.set_title("Orginal data")
     ax1.set_title("Median subtracted")
+    return fig,ax0,ax1
+
+def addColourBars(inps):
+    for handle, axis in inps:
+        divider0 = make_axes_locatable(axis)
+        cax0 = divider0.append_axes("right", size="4%", pad=0.05)
+        cbar0 = plt.colorbar(handle, cax=cax0)
     
-    ax0.imshow(image, vmin=1310, vmax=1450, cmap="Blues_r")
-    ax1.imshow(filterImage, vmin=1310, vmax=1450, cmap="Blues_r")
+def getMaskedImage(imageStart):
+    debug("Masking image")
+    median = np.median(imageStart)
+    badPixels = (imageStart < -1000) | (imageStart > 1e9)
+    imageFixed = imageStart * (1 - badPixels) + median * badPixels
     
-    fitsFile.data = filterImage
-    if os.path.isfile(outputName):
-        debug("Existing broad clean file found. Overwriting.")
-    fitsFile.writeto(outputName, clobber=True)
-    fitsFile.close()
-    debug("Broad clean fits file generated and saved to %s" % outputName)
+    if debugPlot:
+        fig, ax0, ax1 = getDefaultImgComparison()
+        ax0.set_title("Input image")
+        ax1.set_title("Masked image")
+        im0 = ax0.imshow(imageStart, vmin=1300, vmax=1400, cmap=cmap)
+        im1 = ax1.imshow(imageFixed, vmin=1300, vmax=1400, cmap=cmap)
+        addColourBars([(im0, ax0), (im1, ax1)])
+        plt.show()
+    debug("Image masked")
+    return imageFixed
+    
+    
+    
+def broadClean(originalImage, redo=False, fast=False, s=100):
+    outputName = "../resources/clarisseBroadClean.fits"
+    analyse = True
+    if not redo and os.path.isfile(outputName):
+        try:
+            f = fits.open(outputName)
+            filterImage = f[0].data
+            f.close()
+            debug("Loaded existing file at %s" % outputName)
+            analyse = False
+        except Exception:
+            debug("Previous file at %s not found" % outputName)
+    if analyse:
+        debug("Generating broad clean fits file")
+        if fast:
+            ratio = 0.5
+            debug("Fast option selected. Reducing resolution by factor of %0.2f" % (1/ratio))
+            s = np.ceil(s * ratio)
+            image = resize(originalImage, np.floor(np.array(originalImage.shape) * ratio), order=1, preserve_range=True)
+            debug("Image resized")
+        else:
+            image = originalImage
+        y = np.arange(-s+1,s)[:,np.newaxis]
+        x = np.arange(-s+1,s)[np.newaxis,:]
+        r = np.sqrt(x*x + y*y)
+        fil = ((r < s) & (r > np.floor(s * 0.7)))
+        debug("Beginning convolution")
+        t = time()
+        filterImage = median_filter(image, footprint=fil)
+        debug("Convolution completed in %0.2f seconds" % (time() - t))
+        if fast:
+            debug("Expanding image to original size")
+            filterImage = resize(filterImage, originalImage.shape, order=1, preserve_range=True) #scipy.ndimage.interpolation.zoom
+        
+    if debugPlot:
+        fig, ax0, ax1 = getDefaultImgComparison()
+        ax0.set_title("Input image")
+        ax1.set_title("Median filter image")
+        im0 = ax0.imshow(originalImage, vmin=1310, vmax=1450, cmap=cmap)
+        im1 = ax1.imshow(filterImage, vmin=1310, vmax=1450, cmap=cmap)
+        addColourBars([(im0, ax0), (im1, ax1)])
+        plt.show()
+    if analyse:
+        hdu = fits.PrimaryHDU(filterImage)
+        if os.path.isfile(outputName):
+            debug("Existing broad clean file found. Overwriting.")
+        hdu.writeto(outputName, clobber=True)
+        debug("Broad clean fits file generated and saved to %s" % outputName)
     return (outputName, filterImage)
     
-(outputName, cleanImage) = broadClean(fitsPath, redo=True, fast=True)
+    
+def getSubtracted(originalImage, cleanImage):
+    result = originalImage - cleanImage
+    debug("Subtracting clean background")
+    if debugPlot:
+        fig, ax0, ax1 = getDefaultImgComparison()
+        ax0.set_title("Input image")
+        ax1.set_title("Background subtracted image")
+        im0 = ax0.imshow(originalImage, vmin=1310, vmax=1450, cmap=cmap)
+        im1 = ax1.imshow(result, vmin=0, vmax=100, cmap=cmap)
+        addColourBars([(im0, ax0), (im1, ax1)])
+        plt.show()
+    debug("Background subtracted")
+    return result
+    
+    
+    
+    
+    
+    
+    
+# Get the fits file
+fitsFile = fits.open(fitsPath)
+imageOriginal = fitsFile[0].data
+fitsFile.close()
+
+# Add mask to help out the median convolution
+imageMasked = getMaskedImage(imageOriginal)
+# Perform the median convolution to remove galaxy light pollution
+(outputName, imageClean) = broadClean(imageMasked, redo=False, fast=True)
+# Subtract out the light pollution
+imageSubtracted = getSubtracted(originalImage, cleanImage)
+# Find the correct sky flux
+# TODO
+# Add this back into the image, because some programs require it
+# TODO
+
 
 
 
