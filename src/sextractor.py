@@ -464,11 +464,12 @@ class SExtractor:
 
 
 
-    def update_config(self):
+    def update_config(self, cwd=None):
         """
         Update the configuration files according to the current
         in-memory SExtractor configuration.
         """
+        if cwd is None: cwd = '.'
 
         # -- Write filter configuration file
 
@@ -478,7 +479,7 @@ class SExtractor:
         rows = len(filter)
         cols = len(filter[0])   # May raise ValueError, OK
 
-        filter_f = __builtin__.open(self.config['FILTER_NAME'], 'w')
+        filter_f = __builtin__.open(cwd + os.sep + self.config['FILTER_NAME'], 'w')
         filter_f.write("CONV NORM\n")
         filter_f.write("# %dx%d Generated from sextractor.py module.\n" %
                        (rows, cols))
@@ -490,7 +491,7 @@ class SExtractor:
 
         # -- Write parameter list file
 
-        parameters_f = __builtin__.open(self.config['PARAMETERS_NAME'], 'w')
+        parameters_f = __builtin__.open(cwd + os.sep + self.config['PARAMETERS_NAME'], 'w')
         for parameter in self.config['PARAMETERS_LIST']:
             print >>parameters_f, parameter
 
@@ -498,14 +499,14 @@ class SExtractor:
 
         # -- Write NNW configuration file
 
-        nnw_f = __builtin__.open(self.config['STARNNW_NAME'], 'w')
+        nnw_f = __builtin__.open(cwd + os.sep + self.config['STARNNW_NAME'], 'w')
         nnw_f.write(nnw_config)
         nnw_f.close()
 
 
         # -- Write main configuration file
 
-        main_f = __builtin__.open(self.config['CONFIG_FILE'], 'w')
+        main_f = __builtin__.open(cwd + os.sep + self.config['CONFIG_FILE'], 'w')
 
         for key in self.config.keys():
             if (key in SExtractor._SE_config_special_keys):
@@ -522,7 +523,7 @@ class SExtractor:
         main_f.close()
 
 
-    def run(self, filename, updateconfig=True, clean=True, path=None):
+    def run(self, filename, updateconfig=True, clean=True, path=None, cwd=None):
         """
         Run SExtractor.
 
@@ -535,7 +536,7 @@ class SExtractor:
         """
 
         if updateconfig:
-            self.update_config()
+            self.update_config(cwd=cwd)
 
         # Try to find SExtractor program
         # This will raise an exception if it failed
@@ -544,25 +545,29 @@ class SExtractor:
 
         commandline = (self.program + " -c " + self.config['CONFIG_FILE'] + " " + filename)
         # print commandline
-
+        output = ""
         try:
-            output = subprocess.check_output(commandline, stderr=subprocess.STDOUT, shell=True)
+            output = subprocess.check_output(commandline, stderr=subprocess.STDOUT, shell=True, cwd=cwd)
+        except subprocess.CalledProcessError as e:
+            raise SExtractorException("SExtractor command [%s] failed.\n\n%s" % (commandline, e.output))
         except Exception:
-            raise SExtractorException("SExtractor command [%s] failed." % commandline)
+            raise SExtractorException("SExtractor command [%s] failed." % (commandline))
             
             
-        d = self.getData(filename)
+        d = self.getData(filename, cwd=cwd)
         d['output'] = output
         
         if clean:
-            self.clean(config=True, catalog=True, check=True)
+            self.clean(config=True, catalog=True, check=True, cwd=cwd)
             
         return d
         
-    def getData(self, filename):
-        c = self.catalog()
-        imagesFits = [fits.open(a)[0].data for a in self.config['CHECKIMAGE_NAME']]
-        imageTypes = self.config['CHECKIMAGE_TYPE']
+    def getData(self, filename, cwd=None):
+        if cwd is None: cwd = '.'
+        
+        c = self.catalog(cwd)
+        imagesFits = [fits.open(cwd + os.sep + a)[0].data for a in self.config['CHECKIMAGE_NAME']]
+        imageTypes = copy.deepcopy(self.config['CHECKIMAGE_TYPE'])
         imagesFits.append(fits.open(filename)[0].data)
         imageTypes.append("ORIGINAL")
         images = dict(zip(imageTypes, imagesFits))
@@ -574,42 +579,42 @@ class SExtractor:
         
         
 
-    def catalog(self):
+    def catalog(self, cwd=None):
         """
         Read the output catalog produced by the last SExtractor run.
         Output is a list of dictionaries, with a dictionary for
         each star: {'param1': value, 'param2': value, ...}.
         """
-
+        if cwd is None: cwd = '.'
         #output_f = SExtractorfile(self.config['CATALOG_NAME'], 'r')
         #c = output_f.read()
         #output_f.close()
-        c = np.loadtxt(self.config['CATALOG_NAME'], dtype=[(a, 'float') for a in self.config['PARAMETERS_LIST']])
+        c = np.loadtxt(cwd + os.sep + self.config['CATALOG_NAME'], dtype=[(a, 'float') for a in self.config['PARAMETERS_LIST']])
         return c
 
 
-    def clean(self, config=True, catalog=False, check=False):
+    def clean(self, config=True, catalog=False, check=False, cwd=None):
         """
         Remove the generated SExtractor files (if any).
         If config is True, remove generated configuration files.
         If catalog is True, remove the output catalog.
         If check is True, remove output check image.
         """
-
+        if cwd is None: cwd = '.'
         try:
             if (config):
-                os.unlink(self.config['FILTER_NAME'])
-                os.unlink(self.config['PARAMETERS_NAME'])
-                os.unlink(self.config['STARNNW_NAME'])
-                os.unlink(self.config['CONFIG_FILE'])
+                os.unlink(cwd + os.sep + self.config['FILTER_NAME'])
+                os.unlink(cwd + os.sep + self.config['PARAMETERS_NAME'])
+                os.unlink(cwd + os.sep + self.config['STARNNW_NAME'])
+                os.unlink(cwd + os.sep + self.config['CONFIG_FILE'])
             if (catalog):
-                os.unlink(self.config['CATALOG_NAME'])
+                os.unlink(cwd + os.sep + self.config['CATALOG_NAME'])
             if (check):
                 if type(self.config['CHECKIMAGE_NAME'] in [list, tuple]):
                     for n in self.config['CHECKIMAGE_NAME']:
-                        os.unlink(n);
+                        os.unlink(cwd + os.sep + n);
                 else:
-                    os.unlink(self.config['CHECKIMAGE_NAME'])
+                    os.unlink(cwd + os.sep + self.config['CHECKIMAGE_NAME'])
                 
         except OSError:
             pass
