@@ -17,7 +17,9 @@ from matplotlib.ticker import NullFormatter
 from sklearn import manifold
 from sklearn.utils import check_random_state
 from sklearn.cluster import DBSCAN
+from sklearn.cluster import MeanShift, estimate_bandwidth
 from sklearn import metrics
+from itertools import cycle
 
 debugFlag = True
 debugPlot = True
@@ -55,7 +57,7 @@ def getSextractor(**kwargs):
     sex.config['GAIN'] = 5.0
     sex.config['SATUR_LEVEL'] = 45000
     sex.config['MAG_GAMMA'] = 4.0
-    sex.config['PHOT_APERTURES'] = [3,5,7,9,11]
+    sex.config['PHOT_APERTURES'] = [1,2,2.5,3,3.5,4,4.5,5,5.5,6,6.5,7,8,12,14,18]
     sex.config['MEMORY_OBJSTACK'] = 30000
     sex.config['MEMORY_PIXSTACK'] = 6000000
     sex.config['MEMORY_BUFSIZE'] = 16384
@@ -108,7 +110,7 @@ def getMaskedImage(imageStart):
     
     
     
-def broadClean(originalImage, redo=False, fast=False, s=100):
+def broadClean(originalImage, redo=False, fast=False, s=150):
     outputName = "../resources/clarisseBroadClean.fits"
     analyse = True
     if not redo and os.path.isfile(outputName):
@@ -159,8 +161,9 @@ def broadClean(originalImage, redo=False, fast=False, s=100):
     return (outputName, filterImage)
     
     
-def getSubtracted(originalImage, cleanImage):
+def getSubtracted(originalImage, cleanImage, fitsPath):
     result = originalImage - cleanImage
+    result[result > 1e10] = 0
     debug("Subtracting clean background")
     if debugPlot:
         fig, ax0, ax1 = getDefaultImgComparison()
@@ -171,6 +174,12 @@ def getSubtracted(originalImage, cleanImage):
         addColourBars([(im0, ax0), (im1, ax1)])
         plt.show()
     debug("Background subtracted")
+    saveas = "../resources/subtracted.fits"
+    fitsFile = fits.open(fitsPath)
+    fitsFile[0].data = result
+    fitsFile.writeto(saveas, clobber=True)
+    fitsFile.close()
+    debug("Subtracted fits file saved to %s for testing" % saveas)
     return result
     
     
@@ -245,7 +254,7 @@ def getCatalogs(fitsPath, imageClean, pixelThreshold=2):
         catTotal = np.concatenate((cat1, cat2[mask]))
         debug("Catalogs merged. Found %d objects." % catTotal.size)
     
-        return catTotal   
+        return catTotal, sex
              
     except:
         raise
@@ -257,19 +266,20 @@ def getCatalogs(fitsPath, imageClean, pixelThreshold=2):
             if exc.errno != errno.ENOENT:
                 raise  # re-raise exception
 
-def visualiseHigherDimensions(catalog):
+def visualiseHigherDimensions(catalog, maskExtended):
     
     debug("Checking for data patterns. Reducing dimensionality for visualisation")
     cat = catalog.view(np.float64).reshape(catalog.shape + (-1,))
-    sphere_data = cat[:, 1:]
-    
+    sphere_data = cat[:, 3:]
     # Variables for manifold learning.
+    s = 1000
+    downFilterIndexes = np.unique(np.concatenate((np.random.randint(sphere_data.shape[0], size=s), np.where(maskExtended)[0])))
+    maskExtended = maskExtended[downFilterIndexes]
+    sphere_data = sphere_data[downFilterIndexes, :]
     n_neighbors = 10
-    colors = catalog['MAG_APER(1)']
+    colors = maskExtended * 100
 
     fig = plt.figure(figsize=(20, 12))
-    plt.suptitle("Manifold Learning with %i points, %i neighbors"
-                 % (1000, n_neighbors), fontsize=14)
     # Perform Locally Linear Embedding Manifold learning
     methods = ['standard', 'ltsa', 'hessian', 'modified']
     labels = ['LLE', 'LTSA', 'Hessian LLE', 'Modified LLE']
@@ -286,7 +296,8 @@ def visualiseHigherDimensions(catalog):
                                     method=method).fit_transform(sphere_data).T
             t1 = time()
             debug("%s: %.2g sec" % (methods[i], t1 - t0))
-            plt.scatter(trans_data[0], trans_data[1], c=colors, cmap=plt.cm.rainbow)
+            plt.scatter(trans_data[0][maskExtended], trans_data[1][maskExtended], c='r', cmap=plt.cm.rainbow,marker='>')
+            plt.scatter(trans_data[0][~maskExtended], trans_data[1][~maskExtended], c='b', cmap=plt.cm.rainbow,marker='o', alpha=0.2)
             plt.title("%s (%.2g sec)" % (labels[i], t1 - t0))
             ax.xaxis.set_major_formatter(NullFormatter())
             ax.yaxis.set_major_formatter(NullFormatter())
@@ -302,7 +313,8 @@ def visualiseHigherDimensions(catalog):
     debug("%s: %.2g sec" % ('ISO', t1 - t0))
     
     ax = fig.add_subplot(257)
-    plt.scatter(trans_data[0], trans_data[1], c=colors, cmap=plt.cm.rainbow)
+    plt.scatter(trans_data[0][maskExtended], trans_data[1][maskExtended], c='r', cmap=plt.cm.rainbow, marker='>')
+    plt.scatter(trans_data[0][~maskExtended], trans_data[1][~maskExtended], c='b', cmap=plt.cm.rainbow, marker='o', alpha=0.2)
     plt.title("%s (%.2g sec)" % ('Isomap', t1 - t0))
     ax.xaxis.set_major_formatter(NullFormatter())
     ax.yaxis.set_major_formatter(NullFormatter())
@@ -316,7 +328,8 @@ def visualiseHigherDimensions(catalog):
     debug("MDS: %.2g sec" % (t1 - t0))
     
     ax = fig.add_subplot(258)
-    plt.scatter(trans_data[0], trans_data[1], c=colors, cmap=plt.cm.rainbow)
+    plt.scatter(trans_data[0][maskExtended], trans_data[1][maskExtended], c='r', cmap=plt.cm.rainbow, marker='>')
+    plt.scatter(trans_data[0][~maskExtended], trans_data[1][~maskExtended], c='b', cmap=plt.cm.rainbow, marker='o', alpha=0.2)
     plt.title("MDS (%.2g sec)" % (t1 - t0))
     ax.xaxis.set_major_formatter(NullFormatter())
     ax.yaxis.set_major_formatter(NullFormatter())
@@ -331,7 +344,8 @@ def visualiseHigherDimensions(catalog):
     debug("Spectral Embedding: %.2g sec" % (t1 - t0))
     
     ax = fig.add_subplot(259)
-    plt.scatter(trans_data[0], trans_data[1], c=colors, cmap=plt.cm.rainbow)
+    plt.scatter(trans_data[0][maskExtended], trans_data[1][maskExtended], c='r', cmap=plt.cm.rainbow, marker='>')
+    plt.scatter(trans_data[0][~maskExtended], trans_data[1][~maskExtended], c='b', cmap=plt.cm.rainbow, marker='o', alpha=0.2)
     plt.title("Spectral Embedding (%.2g sec)" % (t1 - t0))
     ax.xaxis.set_major_formatter(NullFormatter())
     ax.yaxis.set_major_formatter(NullFormatter())
@@ -345,69 +359,119 @@ def visualiseHigherDimensions(catalog):
     debug("t-SNE: %.2g sec" % (t1 - t0))
     
     ax = fig.add_subplot(2, 5, 10)
-    plt.scatter(trans_data[0], trans_data[1], c=colors, cmap=plt.cm.rainbow)
+    plt.scatter(trans_data[0][maskExtended], trans_data[1][maskExtended], c='r', cmap=plt.cm.rainbow, marker=">")
+    plt.scatter(trans_data[0][~maskExtended], trans_data[1][~maskExtended], c='b', cmap=plt.cm.rainbow, marker="o", alpha=0.2)
     plt.title("t-SNE (%.2g sec)" % (t1 - t0))
     ax.xaxis.set_major_formatter(NullFormatter())
     ax.yaxis.set_major_formatter(NullFormatter())
     plt.axis('tight')
+    plt.show()
 
 def checkForClustering(catalog):
     debug("Checking for data clustering")
-    X = catalog.view(np.float64).reshape(catalog.shape + (-1,))
+    Xfull = catalog.view(np.float64).reshape(catalog.shape + (-1,))[:,1:]
+    X = Xfull[:,2:]
+    
+    
+    debug("Using DBSCAN")
     db = DBSCAN(eps=0.3, min_samples=10).fit(X)
     core_samples_mask = np.zeros_like(db.labels_, dtype=bool)
     core_samples_mask[db.core_sample_indices_] = True
     labels = db.labels_
-    
-    # Number of clusters in labels, ignoring noise if present.
-    n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
-    
-    debug('Estimated number of clusters: %d' % n_clusters_)
-    
-    unique_labels = set(labels)
-    colors = plt.cm.Spectral(np.linspace(0, 1, len(unique_labels)))
-    for k, col in zip(unique_labels, colors):
-        if k == -1:
-            col = 'k'
-        class_member_mask = (labels == k)
-        xy = X[class_member_mask & core_samples_mask]
-        plt.plot(xy[:, 2], xy[:, 3], 'o', markerfacecolor=col, markeredgecolor='k', markersize=14)
-        xy = X[class_member_mask & ~core_samples_mask]
-        plt.plot(xy[:, 2], xy[:, 3], 'o', markerfacecolor=col, markeredgecolor='k', markersize=6)
-    
-    plt.title('Estimated number of clusters: %d' % n_clusters_)
-
-def showStats(catalog):
-    
-    cat = catalog.view(np.float64).reshape(catalog.shape + (-1,))
-    cat = cat[:, 1:]    
+    n_clusters_DBSCAN = len(set(labels)) - (1 if -1 in labels else 0)
+    debug('Estimated number of clusters with DBSCAN: %d' % n_clusters_DBSCAN)
         
-    fig = plt.figure(figsize(12,12))
+    unique_labelsDBSCAN = set(labels)
+    colorsDBSCAN = plt.cm.rainbow(np.linspace(0, 1, len(unique_labelsDBSCAN)))
+    
+    debug("Estimating clusters using MeanShift")
+    bandwidth = estimate_bandwidth(X, quantile=0.2, n_samples=500)
+    ms = MeanShift(bandwidth=bandwidth, bin_seeding=True)
+    ms.fit(X)
+    labelsMS = ms.labels_
+    cluster_centers = ms.cluster_centers_
+    labels_uniqueMS = np.unique(labelsMS)
+    n_clusters_MS = len(labels_uniqueMS)
+    debug("Estimated number of clusters with MeanShift: %d" % n_clusters_MS)
+    
+    # Plot result
+    fig = plt.figure(figsize=(12,12))
     ax0 = fig.add_subplot(2,2,1)
     ax1 = fig.add_subplot(2,2,2)
     ax2 = fig.add_subplot(2,2,3)
     ax3 = fig.add_subplot(2,2,4)
+    for k, col in zip(unique_labelsDBSCAN, colorsDBSCAN):
+        if k == -1:
+            col = 'k'
+        class_member_mask = (labels == k)
+        mask = class_member_mask & core_samples_mask
+        xy = Xfull[mask]
+        ax0.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=col, markeredgecolor='k', markersize=5)
+        ax2.plot(catalog['MAG_APER(1)'][mask], catalog['CLASS_STAR'][mask], 'o', markerfacecolor=col, markeredgecolor='k', markersize=5)
+        xy = Xfull[class_member_mask & ~core_samples_mask]
+        ax0.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=col, markeredgecolor='k', markersize=5)
+        ax2.plot(catalog['MAG_APER(1)'][class_member_mask & ~core_samples_mask], catalog['CLASS_STAR'][class_member_mask & ~core_samples_mask], 'o', markerfacecolor=col, markeredgecolor='k', markersize=5)
+
+        ax0.set_title('DBCAN: # clusters: %d' % n_clusters_DBSCAN)
+        
+        
+    colors = cycle('bgrcmykbgrcmykbgrcmykbgrcmyk')
+    for k, col in zip(range(n_clusters_MS), colors):
+        my_members = labelsMS == k
+        cluster_center = cluster_centers[k]
+        ax1.plot(Xfull[my_members, 0], Xfull[my_members, 1], col + '.')
+        ax3.plot(catalog['MAG_APER(1)'][my_members], catalog['CLASS_STAR'][my_members], col + '.')
+        #ax1.plot(cluster_center[0], cluster_center[1], 'o', markerfacecolor=col, markeredgecolor='k', markersize=14)
+    ax1.set_title('MeanShift: # clusters: %d' % n_clusters_MS)
+    plt.show()
+
+def showStats(catalog, maskExtended):
     
-    ax0.scatter(catalog['X_IMAGE'], catalog['Y_IMAGE'], s=3, lw = 0, c=catalog['CLASS_STAR'])
+    cat = catalog.view(np.float64).reshape(catalog.shape + (-1,))
+    cat = cat[:, 1:]    
+        
+    fig = plt.figure(figsize(12,8))
+    ax0 = fig.add_subplot(2,3,1)
+    ax1 = fig.add_subplot(2,3,2)
+    ax2 = fig.add_subplot(2,3,3)
+    ax3 = fig.add_subplot(2,3,4)
+    ax4 = fig.add_subplot(2,3,5)
+    ax5 = fig.add_subplot(2,3,6)
+    
+    
+    
+    ax0.scatter(catalog['X_IMAGE'][maskExtended], catalog['Y_IMAGE'][maskExtended], lw = 0, c=catalog['CLASS_STAR'][maskExtended], marker='>')
+    ax0.scatter(catalog['X_IMAGE'][~maskExtended], catalog['Y_IMAGE'][~maskExtended], lw = 0, c=catalog['CLASS_STAR'][~maskExtended], marker='o', alpha=0.2)
     ax0.set_xlabel("X")
     ax0.set_ylabel("Y")
     
-    ax1.scatter(catalog['MAG_APER(1)'], catalog['CLASS_STAR'], c=catalog['CLASS_STAR'], lw=0)
+    ax1.scatter(catalog['MAG_APER(1)'][maskExtended], catalog['CLASS_STAR'][maskExtended], c=catalog['CLASS_STAR'][maskExtended], lw=0, marker='>')
+    ax1.scatter(catalog['MAG_APER(1)'][~maskExtended], catalog['CLASS_STAR'][~maskExtended], alpha=0.02, c=catalog['CLASS_STAR'][~maskExtended], lw=0, marker='o')
     ax1.set_xlabel("MAG_APER(1)")
     ax1.set_ylabel("CLASS_STAR")
     
-    ax2.scatter(catalog['MAG_APER(2)'], catalog['MAG_APER(2)'] - catalog['MAG_APER(4)'], c=catalog['CLASS_STAR'], lw=0)
+    ax2.scatter(catalog['MAG_APER(2)'][maskExtended], catalog['MAG_APER(2)'][maskExtended] - catalog['MAG_APER(3)'][maskExtended], c=catalog['CLASS_STAR'][maskExtended], lw=0, marker='>')
+    ax2.scatter(catalog['MAG_APER(2)'][~maskExtended], catalog['MAG_APER(2)'][~maskExtended] - catalog['MAG_APER(3)'][~maskExtended], alpha=0.02, c=catalog['CLASS_STAR'][~maskExtended], lw=0, marker='o')
     ax2.set_xlabel("MAG_APER(2)")
-    ax2.set_ylabel("MAG_APER(2) - MAG_APER(4)")
+    ax2.set_ylabel("MAG_APER(2) - MAG_APER(3)")
     
-    ax3.scatter(catalog['MAG_APER(1)'], catalog['MAG_APER(1)'] - catalog['MAG_APER(2)'], c=catalog['CLASS_STAR'], lw=0)
+    ax3.scatter(catalog['MAG_APER(1)'][maskExtended], catalog['MAG_APER(1)'][maskExtended] - catalog['MAG_APER(2)'][maskExtended], c=catalog['CLASS_STAR'][maskExtended], lw=0, marker='>')
+    ax3.scatter(catalog['MAG_APER(1)'][~maskExtended], catalog['MAG_APER(1)'][~maskExtended] - catalog['MAG_APER(2)'][~maskExtended], alpha=0.02, c=catalog['CLASS_STAR'][~maskExtended], lw=0, marker='o')
     ax3.set_xlabel("MAG_APER(1)")
     ax3.set_ylabel("MAG_APER(1) - MAG_APER(2)")
     
+    ax4.scatter(catalog['MAG_APER(1)'][maskExtended], catalog['FWHM_IMAGE'][maskExtended], c=catalog['CLASS_STAR'][maskExtended], lw=0, marker='>')
+    ax4.scatter(catalog['MAG_APER(1)'][~maskExtended], catalog['FWHM_IMAGE'][~maskExtended], alpha=0.02, c=catalog['CLASS_STAR'][~maskExtended], lw=0, marker='o')
+    ax4.set_xlabel("MAG_APER(1)")
+    ax4.set_ylabel("FWHM_IMAGE")
+    ax4.set_ylim(0,10)
+    
+    
     plt.tight_layout()
+    plt.show()
     #ax3.scatter(trans_data[0], trans_data[1])
     
-def trimCatalog(catalog, imageOriginal, maskBad, border=50, expand=5, magLimit=30):
+def trimCatalog(catalog, imageOriginal, maskBad, sex, border=60, expand=3, magLimit=30):
     debug("Trimming catalog")
     maskBad = maskBad * 1
     maskBad[:,0:border] = 1
@@ -426,15 +490,11 @@ def trimCatalog(catalog, imageOriginal, maskBad, border=50, expand=5, magLimit=3
     maskBad = resize(maskShrunk, maskBad.shape, order=1, preserve_range=True) #scipy.ndimage.interpolation.zoom        
     maskGood = (maskBad == 0)
     
-    catalogTrimmed = catalog[(maskGood[catalog['Y_IMAGE'].astype(int),catalog['X_IMAGE'].astype(int)])]
+    catalogTrimmed = catalog[(maskGood[catalog['Y_IMAGE'].astype(int) - 1,catalog['X_IMAGE'].astype(int) - 1])]
     
     debug("Removing sources that are too faint")
-    catalogTrimmed = catalogTrimmed[catalogTrimmed['MAG_APER(1)'] < magLimit]
-    catalogTrimmed = catalogTrimmed[catalogTrimmed['MAG_APER(2)'] < magLimit]
-    catalogTrimmed = catalogTrimmed[catalogTrimmed['MAG_APER(3)'] < magLimit]
-    catalogTrimmed = catalogTrimmed[catalogTrimmed['MAG_APER(4)'] < magLimit]
-    catalogTrimmed = catalogTrimmed[catalogTrimmed['MAG_APER(5)'] < magLimit]
-    
+    for i in range(len(sex.config['PHOT_APERTURES'])):
+        catalogTrimmed = catalogTrimmed[catalogTrimmed['MAG_APER(%d)'%(i+1)] < magLimit]
     if debugPlot:
         fig, ax0, ax1 = getDefaultImgComparison()
         ax0.set_title("Input image and catalog")
@@ -449,6 +509,73 @@ def trimCatalog(catalog, imageOriginal, maskBad, border=50, expand=5, magLimit=3
     debug("Trimming went from %d objects to %d objects" % (catalog.size, catalogTrimmed.size))
     return catalogTrimmed
     
+def getCandidates(catalog, pixelThreshold=1):
+    debug("Loading in Ricardo's extendeds")
+    coord = np.loadtxt("../resources/candidates")
+    mask = []
+    for entry in catalog:
+        dists = np.sqrt((entry['X_IMAGE'] - coord[:,0])**2 + (entry['Y_IMAGE'] - coord[:,1])**2 )
+        mask.append(dists.min() < pixelThreshold)
+    mask = np.array(mask)
+    return mask
+    
+def normaliseRadial(catalog, sex, maskExtended):
+    
+    magArray = []
+    debug("Constructing magnitude arrays")
+    for entry in catalog:
+        mags = [entry['MAG_APER(%d)'%(i+1)] for i in range(len(sex.config['PHOT_APERTURES']))]
+        magArray.append(mags)
+    magArray = np.array(magArray)
+    magArrayNormalised = magArray - np.max(magArray, axis=1)[np.newaxis].T
+    
+    mins = np.min(magArrayNormalised, axis=1)
+    magArrayNormalised = magArrayNormalised / mins[np.newaxis].T
+    radii = sex.config['PHOT_APERTURES']
+    
+    debug("Creating radial plot")
+    result = []
+    t = 1/np.sqrt(2)
+    for row in magArrayNormalised:
+        pixels = radii[np.where(row > t)[0][0]]
+        result.append(pixels)
+    result = np.array(result)
+    
+    if debugPlot:
+        fig = plt.figure(figsize=(15,5))
+        ax0 = fig.add_subplot(1,3,1)
+        ax1 = fig.add_subplot(1,3,2)
+        ax2 = fig.add_subplot(1,3,3)
+        for i,row in enumerate(magArrayNormalised):
+            alpha = 1 if maskExtended[i] else 0.04
+            c = 'r' if maskExtended[i] else 'b'
+            ax0.plot(radii, row, color=c, alpha=alpha)
+            
+        d = np.diff(radii)
+        bins = np.concatenate(([radii[0] - d[0]], radii[1:] + 0.5*d))
+        h1, ed1 = np.histogram(result[maskExtended], bins=bins, density=False)
+        x1 = 0.5*(ed1[1:] + ed1[:-1])
+
+        h2, ed2 = np.histogram(result[~maskExtended], bins=bins, density=False)
+        x2 = 0.5*(ed2[1:] + ed2[:-1])
+        width= 0.7 * diff(bins)
+        ax1.bar(x1, 1.0*h1/h1.sum(), width=width, label="Extended", color='r', alpha=0.5)
+        ax1.bar(x2, 1.0*h2/h2.sum(), width=width, label="Point", color='b', alpha=0.5)
+        ax2.bar(x1, h1, width=width, label="Extended", color='r', alpha=0.5)
+        ax2.bar(x2, h2, width=width, label="Point", color='b', alpha=0.5)
+        ax2.set_yscale('log')
+        ax1.set_xlabel("Pix at 0.707 normalised magnitude (Prob)")
+        ax2.set_xlabel("Pix at 0.707 normalised magnitude (Number)")
+        ax0.set_xlabel("Pix")
+        ax0.set_ylabel("Normalised magnitude falloff")
+        ax1.set_xlim(2, 8)
+        ax1.legend()
+        plt.show()
+        
+    return result
+        
+    
+    
 ## Get the fits file
 #fitsFile = fits.open(fitsPath)
 #imageOriginal = fitsFile[0].data
@@ -457,22 +584,23 @@ def trimCatalog(catalog, imageOriginal, maskBad, border=50, expand=5, magLimit=3
 ## Add mask to help out the median convolution
 #mask, imageMasked = getMaskedImage(imageOriginal)
 ## Perform the median convolution to remove galaxy light pollution
-#(outputName, imageClean) = broadClean(imageMasked, redo=False, fast=True)
+#(outputName, imageBackground) = broadClean(imageMasked, redo=False, fast=True)
 ## Subtract out the light pollution
-#imageSubtracted = getSubtracted(originalImage, cleanImage)
+#imageSubtracted = getSubtracted(imageOriginal, imageBackground, fitsPath)
 ## Find the correct sky flux
-#skyFlux, imageSky = addSkyFlux(imageOriginal, imageClean)
+#skyFlux, imageSky = addSkyFlux(imageOriginal, imageSubtracted)
 # Get the object catalogs from sextractor
-catalog = getCatalogs(fitsPath, imageClean)
+#catalog, sex = getCatalogs(fitsPath, imageSubtracted)
 ## Trim Catalogs
-catalogTrimmed = trimCatalog(catalog, imageOriginal, mask)
+#catalogTrimmed = trimCatalog(catalog, imageOriginal, mask, sex)
+## Get mask for estimated extendeds
+#maskExtended = getCandidates(catalogTrimmed)
 # Plot some statistics for the objects
-#visualiseHigherDimensions(catalog)
-#checkForClustering(catalog)
+#visualiseHigherDimensions(catalogTrimmed, maskExtended)
+#checkForClustering(catalogTrimmed)
+#showStats(catalogTrimmed, maskExtended)
 
-showStats(catalogTrimmed)
-
-
+pix = normaliseRadial(catalogTrimmed, sex, maskExtended)
 
 
 

@@ -234,11 +234,11 @@ class SExtractor:
         
         "DETECT_THRESH":
         {"comment": "<sigmas> or <threshold>,<ZP> in mag.arcsec-2",
-         "value": 1},
+         "value": 2.5},
         
         "ANALYSIS_THRESH":
         {"comment": "<sigmas> or <threshold>,<ZP> in mag.arcsec-2",
-         "value": 1},
+         "value": 2.5},
         
         "FILTER":
         {"comment": 'apply filter for detection ("Y" or "N")',
@@ -514,6 +514,8 @@ class SExtractor:
             value = self.config[key]
             if (type(value) in [list,tuple]):
                 value = ", ".join(map(str, self.config[key]))
+            elif type(value) == np.ndarray:
+                value = ", ".join(map(str, self.config[key].tolist()))
             else:
                 value = str(self.config[key])
             
