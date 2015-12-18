@@ -20,7 +20,12 @@ from sklearn.cluster import DBSCAN
 from sklearn.cluster import MeanShift, estimate_bandwidth
 from sklearn import metrics
 from itertools import cycle
-
+from numpy.lib.recfunctions import append_fields
+from scipy.interpolate import interp1d
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.tree import DecisionTreeClassifier
+import subprocess
+import stat
 debugFlag = True
 debugPlot = True
 sexPath = '/Users/shinton/Software/Ureka/bin/sex'
@@ -57,7 +62,7 @@ def getSextractor(**kwargs):
     sex.config['GAIN'] = 5.0
     sex.config['SATUR_LEVEL'] = 45000
     sex.config['MAG_GAMMA'] = 4.0
-    sex.config['PHOT_APERTURES'] = [1,2,2.5,3,3.5,4,4.5,5,5.5,6,6.5,7,8,12,14,18]
+    sex.config['PHOT_APERTURES'] = [1,2,2.5,3,3.25,3.5,3.75,4,4.25,4.5,5,5.5,6,6.5,7,8,12,14,18,20,25]
     sex.config['MEMORY_OBJSTACK'] = 30000
     sex.config['MEMORY_PIXSTACK'] = 6000000
     sex.config['MEMORY_BUFSIZE'] = 16384
@@ -425,26 +430,40 @@ def checkForClustering(catalog):
     ax1.set_title('MeanShift: # clusters: %d' % n_clusters_MS)
     plt.show()
 
-def showStats(catalog, maskExtended):
+def showStats(catalog, m):
     
     cat = catalog.view(np.float64).reshape(catalog.shape + (-1,))
     cat = cat[:, 1:]    
         
-    fig = plt.figure(figsize(12,8))
-    ax0 = fig.add_subplot(2,3,1)
-    ax1 = fig.add_subplot(2,3,2)
-    ax2 = fig.add_subplot(2,3,3)
-    ax3 = fig.add_subplot(2,3,4)
-    ax4 = fig.add_subplot(2,3,5)
-    ax5 = fig.add_subplot(2,3,6)
+    fig = plt.figure(figsize(10,8))
+    ax0 = fig.add_subplot(2,2,1)
+    ax1 = fig.add_subplot(2,2,2)
+    ax2 = fig.add_subplot(2,2,3)
+    ax3 = fig.add_subplot(2,2,4)
+    #ax4 = fig.add_subplot(2,3,5)
+    #ax5 = fig.add_subplot(2,3,6)
     
-    
-    
-    ax0.scatter(catalog['X_IMAGE'][maskExtended], catalog['Y_IMAGE'][maskExtended], lw = 0, c=catalog['CLASS_STAR'][maskExtended], marker='>')
-    ax0.scatter(catalog['X_IMAGE'][~maskExtended], catalog['Y_IMAGE'][~maskExtended], lw = 0, c=catalog['CLASS_STAR'][~maskExtended], marker='o', alpha=0.2)
+    ax0.scatter(catalog['X_IMAGE'][m], catalog['Y_IMAGE'][m], lw = 0, c=catalog['CLASS_STAR'][m], marker='>')
+    ax0.scatter(catalog['X_IMAGE'][~m], catalog['Y_IMAGE'][~m], lw = 0, c=catalog['CLASS_STAR'][~m], marker='o', alpha=0.2)
     ax0.set_xlabel("X")
     ax0.set_ylabel("Y")
     
+    ax1.scatter(catalog['MAG_AUTO'][m], catalog['CLASS_STAR'][m], c=catalog['CLASS_STAR'][m], lw=0, marker='>')
+    ax1.scatter(catalog['MAG_AUTO'][~m], catalog['CLASS_STAR'][~m], alpha=0.02, c=catalog['CLASS_STAR'][~m], lw=0, marker='o')
+    ax1.set_xlabel("MAG_AUTO")
+    ax1.set_ylabel("CLASS_STAR")
+    
+    ax2.scatter(catalog['MAG_AUTO'][m], catalog['FALLOFF'][m], c=catalog['CLASS_STAR'][m], lw=0, marker='>')
+    ax2.scatter(catalog['MAG_AUTO'][~m], catalog['FALLOFF'][~m], alpha=0.02, c=catalog['CLASS_STAR'][~m], lw=0, marker='o')
+    ax2.set_xlabel("MAG_AUTO")
+    ax2.set_ylabel("FALLOFF")
+    
+    ax3.scatter(catalog['FALLOFF'][m], catalog['CLASS_STAR'][m], c=catalog['CLASS_STAR'][m], lw=0, marker='>')
+    ax3.scatter(catalog['FALLOFF'][~m], catalog['CLASS_STAR'][~m], alpha=0.02, c=catalog['CLASS_STAR'][~m], lw=0, marker='o')
+    ax3.set_xlabel("FALLOFF")
+    ax3.set_ylabel("CLASS_STAR")
+
+    '''
     ax1.scatter(catalog['MAG_APER(1)'][maskExtended], catalog['CLASS_STAR'][maskExtended], c=catalog['CLASS_STAR'][maskExtended], lw=0, marker='>')
     ax1.scatter(catalog['MAG_APER(1)'][~maskExtended], catalog['CLASS_STAR'][~maskExtended], alpha=0.02, c=catalog['CLASS_STAR'][~maskExtended], lw=0, marker='o')
     ax1.set_xlabel("MAG_APER(1)")
@@ -465,7 +484,7 @@ def showStats(catalog, maskExtended):
     ax4.set_xlabel("MAG_APER(1)")
     ax4.set_ylabel("FWHM_IMAGE")
     ax4.set_ylim(0,10)
-    
+    '''
     
     plt.tight_layout()
     plt.show()
@@ -533,22 +552,35 @@ def normaliseRadial(catalog, sex, maskExtended):
     magArrayNormalised = magArrayNormalised / mins[np.newaxis].T
     radii = sex.config['PHOT_APERTURES']
     
-    debug("Creating radial plot")
     result = []
     t = 1/np.sqrt(2)
     for row in magArrayNormalised:
-        pixels = radii[np.where(row > t)[0][0]]
-        result.append(pixels)
+        pixels = interp1d(row, radii, kind="linear")(t)
+        result.append(np.round(pixels,3))
     result = np.array(result)
     
+    debug("Removing 'MAG_APER' from catalog, replacing with 'FALLOUT'")
+    names = [n for n in catalog.dtype.names if "MAG_APER" not in n]
+    catalogFinal = catalogTrimmed[names].copy()
+    catalogFinal = append_fields(catalogFinal, 'FALLOFF', result, usemask=False)    
+    
+    
     if debugPlot:
+        debug("Creating radial plot")    
         fig = plt.figure(figsize=(15,5))
         ax0 = fig.add_subplot(1,3,1)
         ax1 = fig.add_subplot(1,3,2)
         ax2 = fig.add_subplot(1,3,3)
         for i,row in enumerate(magArrayNormalised):
-            alpha = 1 if maskExtended[i] else 0.04
-            c = 'r' if maskExtended[i] else 'b'
+            if maskExtended[i]:
+                alpha = 1
+                c = 'r'
+            else:
+                if np.random.random() > 0.9:
+                    alpha = 0.05
+                    c = 'b'
+                else:
+                    continue
             ax0.plot(radii, row, color=c, alpha=alpha)
             
         d = np.diff(radii)
@@ -561,8 +593,8 @@ def normaliseRadial(catalog, sex, maskExtended):
         width= 0.7 * diff(bins)
         ax1.bar(x1, 1.0*h1/h1.sum(), width=width, label="Extended", color='r', alpha=0.5)
         ax1.bar(x2, 1.0*h2/h2.sum(), width=width, label="Point", color='b', alpha=0.5)
-        ax2.bar(x1, h1, width=width, label="Extended", color='r', alpha=0.5)
-        ax2.bar(x2, h2, width=width, label="Point", color='b', alpha=0.5)
+        ax2.plot(x1, h1, label="Extended", color='r')
+        ax2.plot(x2, h2, label="Point", color='b')
         ax2.set_yscale('log')
         ax1.set_xlabel("Pix at 0.707 normalised magnitude (Prob)")
         ax2.set_xlabel("Pix at 0.707 normalised magnitude (Number)")
@@ -570,43 +602,152 @@ def normaliseRadial(catalog, sex, maskExtended):
         ax0.set_ylabel("Normalised magnitude falloff")
         ax1.set_xlim(2, 8)
         ax1.legend()
+        ax2.legend()
+        plt.show()
+
+    
+    return catalogFinal
+    
+def getClassifier(catalog, mask, strength=30):
+    y = mask * 1
+    X = catalog.view(np.float64).reshape(catalog.shape + (-1,))[:, 3:]
+    
+    debug("Creating classifier")
+    # Create and fit an AdaBoosted decision tree
+    bdt = AdaBoostClassifier(DecisionTreeClassifier(max_depth=2), algorithm="SAMME", n_estimators=strength)
+    bdt.fit(X, y, sample_weight=1+10*y)
+    debug("Classifier created")
+    bdt.label = "Boosted Decision Tree"
+    return bdt
+    
+def getGC(classifier, catalog, ellipticity=0.25):
+    X = catalog.view(np.float64).reshape(catalog.shape + (-1,))[:, 3:]
+    z = classifier.predict(X) == 1
+    gcs = z & (catalog['ELLIPTICITY'] < ellipticity)
+    gal = z & (catalog['ELLIPTICITY'] > ellipticity)
+    galaxies = (catalog[gal][['X_IMAGE', 'Y_IMAGE']])
+    np.savetxt("../../../galaxies.txt", galaxies)
+    return catalog[gcs]
+    
+def testSelfClassify(classifier, catalog, y):
+    X = catalog.view(np.float64).reshape(catalog.shape + (-1,))[:, 3:]
+    debug("Testing classifier on training data for consistency")
+    z = classifier.predict(X)
+    
+    correctPoint = (z == 0) & (~y)
+    correctExtended = (z == 1) & (y)
+    incorrectPoint = (z == 1) & (~y)
+    incorrectExtended = (z == 0) & (y)
+    
+    debug("Extended correct: %0.1f%%" % (100.0 * correctExtended.sum() / y.sum()))
+    debug("False negative: %0.1f%%" % (100.0 * incorrectExtended.sum() / (y).sum()))
+    debug("Point correct: %0.1f%%" % (100.0 * correctPoint.sum() / (~y).sum()))
+    debug("False positive: %0.1f%%" % (100.0 * incorrectPoint.sum() / (~y).sum()))
+    
+    if debugPlot:
+        fig = plt.figure(figsize=(8,8))
+        ax0 = fig.add_subplot(1,1,1)
+        ax0.scatter(catalog[correctPoint]['FALLOFF'], catalog[correctPoint]['CLASS_STAR'], label="Correct Point", c="k", lw=0, alpha=0.1)
+        ax0.scatter(catalog[correctExtended]['FALLOFF'], catalog[correctExtended]['CLASS_STAR'], label="Correct Extended", c="g", lw=0, s=30)
+        ax0.scatter(catalog[incorrectExtended]['FALLOFF'], catalog[incorrectExtended]['CLASS_STAR'], label="False negative", c="r", marker="+", lw=1, s=30)
+        ax0.scatter(catalog[incorrectPoint]['FALLOFF'], catalog[incorrectPoint]['CLASS_STAR'], label="False positive", c="m", lw=1, marker="x", s=20)
+        ax0.legend()
+        ax0.set_xlabel("FALLOFF")
+        ax0.set_ylabel("CLASS_STAR")
+        ax0.set_title(classifier.label)
         plt.show()
         
-    return result
+    return getGC(classifier, catalog)
+
+def showInDS9(images, catalog=None):
+    try:
+        tempDir = tempfile.mkdtemp()
+        debug("Generating temp directory at %s" % tempDir)
+        fitsFile = fits.open(fitsPath)
+        names = [tempDir + os.sep + "temp%d.fits"%i for i in range(len(images))]
+        for name,image in zip(names,images):
+            tempFits = name
+            fitsFile[0].data = image
+            fitsFile.writeto(tempFits)
+        fitsFile.close()
         
-    
-    
+        commandline = "ds9 "
+        commandline += " ".join(names)
+        median = np.median(images[0])
+        commandline += " -scale limits %d %d" % (median, median + 50)
+        if catalog is not None:
+            cat = "catalog.txt"
+            catFile = tempDir + os.sep + cat
+            np.savetxt(catFile, catalog[['X_IMAGE', 'Y_IMAGE']])
+            commandline += " -catalog import tsv %s -catalog psky image" % catFile
+        
+        print(commandline)
+        f = "toRun.sh"
+        filename = tempDir + os.sep + f
+        with open(filename, 'w') as fil:
+            fil.write(commandline + " &\n")
+            
+        st = os.stat(filename)
+        os.chmod(filename, st.st_mode | stat.S_IEXEC)
+        print("\n" + filename)
+        
+        #pid = subprocess.call(['/bin/bash', '-i', '-c', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE)    
+        #outs = pid.communicate()
+
+        raw_input("Press enter to close")
+        return None
+
+    except:
+        raise
+    finally:
+        try:
+            #shutil.rmtree(tempDir)  # delete directory
+            pass
+        except OSError as exc:
+            if exc.errno != errno.ENOENT:
+                raise  # re-raise exception
+
 ## Get the fits file
-#fitsFile = fits.open(fitsPath)
-#imageOriginal = fitsFile[0].data
-#fitsFile.close()
-
+fitsFile = fits.open(fitsPath)
+imageOriginal = fitsFile[0].data
+fitsFile.close()
+'''
 ## Add mask to help out the median convolution
-#mask, imageMasked = getMaskedImage(imageOriginal)
+mask, imageMasked = getMaskedImage(imageOriginal)
+
 ## Perform the median convolution to remove galaxy light pollution
-#(outputName, imageBackground) = broadClean(imageMasked, redo=False, fast=True)
+(outputName, imageBackground) = broadClean(imageMasked, redo=False, fast=True)
+
 ## Subtract out the light pollution
-#imageSubtracted = getSubtracted(imageOriginal, imageBackground, fitsPath)
+imageSubtracted = getSubtracted(imageOriginal, imageBackground, fitsPath)
+
 ## Find the correct sky flux
-#skyFlux, imageSky = addSkyFlux(imageOriginal, imageSubtracted)
-# Get the object catalogs from sextractor
-#catalog, sex = getCatalogs(fitsPath, imageSubtracted)
+skyFlux, imageSky = addSkyFlux(imageOriginal, imageSubtracted)
+
+## Get the object catalogs from sextractor
+catalog, sex = getCatalogs(fitsPath, imageSubtracted)
+
 ## Trim Catalogs
-#catalogTrimmed = trimCatalog(catalog, imageOriginal, mask, sex)
+catalogTrimmed = trimCatalog(catalog, imageOriginal, mask, sex)
+
 ## Get mask for estimated extendeds
-#maskExtended = getCandidates(catalogTrimmed)
+maskExtended = getCandidates(catalogTrimmed)
+
+## Manipulate catalog
+catalogFinal = normaliseRadial(catalogTrimmed, sex, maskExtended)
+
 # Plot some statistics for the objects
-#visualiseHigherDimensions(catalogTrimmed, maskExtended)
+#visualiseHigherDimensions(catalogFinal, maskExtended)
 #checkForClustering(catalogTrimmed)
-#showStats(catalogTrimmed, maskExtended)
+#showStats(catalogFinal, maskExtended)
 
-pix = normaliseRadial(catalogTrimmed, sex, maskExtended)
-
-
+classifier = getClassifier(catalogFinal, maskExtended)
 
 
+gcs = testSelfClassify(classifier, catalogFinal, maskExtended)
+'''
 
-
+pid = showInDS9([imageOriginal], catalog=gcs)
 
 
 

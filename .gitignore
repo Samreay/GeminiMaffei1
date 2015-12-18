@@ -58,3 +58,11 @@ docs/_build/
 
 # PyBuilder
 target/
+
+src/run.sh
+
+resources/clarisseBroadClean.fits
+
+resources/subtracted.fits
+
+resources/clarisseBroadClean.fits
