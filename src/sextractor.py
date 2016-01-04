@@ -525,7 +525,7 @@ class SExtractor:
         main_f.close()
 
 
-    def run(self, filename, updateconfig=True, clean=True, path=None, cwd=None):
+    def run(self, filename, updateconfig=True, clean=True, path=None, cwd=None, fileOutput=False):
         """
         Run SExtractor.
 
@@ -555,8 +555,10 @@ class SExtractor:
         except Exception:
             raise SExtractorException("SExtractor command [%s] failed." % (commandline))
             
-            
-        d = self.getData(filename, cwd=cwd)
+        if (fileOutput):
+            d = {'filename': self.config['CATALOG_NAME']}
+        else:
+            d = self.getData(filename, cwd=cwd)
         d['output'] = output
         
         if clean:

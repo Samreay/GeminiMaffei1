@@ -1,0 +1,118 @@
+#!dot
+digraph main {
+    graph[rankdir=LR, center=true, margin=0.2, nodesep=0.3, ranksep=0.15, compound=true]
+    node[shape=circle, fontsize=11, width=0.4]
+    edge[arrowsize=0.6, arrowhead=vee, weight=2]
+
+
+
+	subgraph cluster_0 {
+    	label = "SuprimeCam Pipeline";
+    	margin=5.0;
+    	color="blue"
+    	Ocb[shape="box", label="Overscan\rand bias"];
+    	ff[shape="box", label="Flat\nFielding"];
+    	dc[shape="box", label="Distortion\nCorrection"];
+    	mp[shape="box", label="Measure\nPSF"];
+    	psfe[shape="box", label="PSF\nEqualization"];
+    	mags[shape="box", label="Mask AG\nShade"];
+    	mbp[shape="box", label="Mask\nBad Pixels"];
+    	ans[shape="box", label="Alignment\nand Scaling"];
+    	com[shape="box", label="Combining"];
+
+    	Ocb -> ff;
+    	ff -> dc;
+    	dc -> mp -> psfe -> mags -> mbp -> ans -> com;
+    }
+
+    Start[shape="box", style=rounded];
+
+    Chips[shape="parallelogram"];
+
+    Start -> Chips;
+
+    #SuprimeCam[shape="box", label="SuprimeCam\nPipeline"];
+    #Chips -> SuprimeCam;
+    Chips -> Ocb [lhead=cluster_0];
+    Scamp[shape="box", color="blue"];
+    #SuprimeCam -> Scamp;
+    com -> Scamp;
+
+
+    SWarp[shape="box", color="blue"];
+    Stiff[shape="box", color="blue"];
+    Scamp -> SWarp;
+    SWarp -> Stiff;
+
+    apPhot[shape="box", color="red", label="Aperture\nPhotometry"];
+    SWarp -> apPhot
+
+    colorImage[shape="parallelogram", label="Colour\nImage"];
+
+    Stiff -> colorImage;
+
+    Mask[shape="box"];
+    Chips -> Mask;
+
+    backSub[shape="box", label="Background\nSubtraction"];
+    Mask -> backSub;
+
+    scampSex[shape="box", label="Sextractor", color="blue"];
+    backSub -> scampSex;
+
+    Scamp2[shape="box", label="Scamp", color="blue"];
+    scampSex -> Scamp2;
+
+    MissFits[shape="box", label="MissFits", color="blue"];
+    Scamp2 -> MissFits;
+
+    skyDet[shape="box", label="Sky\nDetermination"];
+    Mask -> skyDet;
+    skyFlux[shape="parallelogram", label="Sky Flux"];
+    skyDet -> skyFlux;
+
+    iShape[shape="box", color="red"];
+    skyFlux -> iShape;
+    MissFits -> iShape;
+
+    sex1[shape="box", label="Sextractor\nGaussian", color="blue"];
+    MissFits -> sex1;
+    sex2[shape="box", label="Sextractor\nMexhat", color="blue"];
+    MissFits -> sex2;
+
+    generalCatalog[shape="parallelogram", label="General Catalog"];
+    sex1 -> generalCatalog;
+    sex2 -> generalCatalog;
+
+    catTrim[shape="box", label="Catalog\nTrimming"];
+    generalCatalog -> catTrim;
+
+    classExtended[shape="box", label="Extended\nClassifier"];
+    catTrim -> classExtended;
+
+    classStar[shape="box", label="Star\nClassifier"];
+    catTrim -> classStar;
+
+    PSFStars[shape="parallelogram", label="PSF Stars"];
+    classStar -> PSFStars;
+
+    PSFDet[shape="box", label="PSF\nDetermination", color="red"];
+    PSFStars -> PSFDet;
+
+    PSFDet -> iShape;
+    classExtended -> iShape;
+
+    catRed[shape="box", label="Catalog\nReduction", color="red"];
+    iShape -> catRed;
+    apPhot -> catRed;
+
+    final[shape="parallelogram", label="Final\nExtendeds"];
+    catRed -> final;
+
+    final -> End;
+    colorImage -> End;
+
+    End[shape="box", style=rounded];
+
+    
+}

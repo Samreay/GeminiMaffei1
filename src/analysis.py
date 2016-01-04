@@ -29,6 +29,8 @@ import stat
 debugFlag = True
 debugPlot = True
 sexPath = '/Users/shinton/Software/Ureka/bin/sex'
+scampPath = '/usr/local/bin/scamp'
+missfitsPath = '/usr/local/bin/missfits'
 fitsPath = "../resources/clarisse+sky.fits"
 cmap = "Blues_r"
 
@@ -46,7 +48,7 @@ def getFilters():
             filters[f[:-5]] = np.loadtxt(dirName + os.sep + f, skiprows=1)
     return filters
     
-def getSextractor(**kwargs):
+def getDefaultSextractor():
     # Create a SExtractor instance
     sex = sextractor.SExtractor()
     
@@ -54,25 +56,39 @@ def getSextractor(**kwargs):
     sex.config['PIXEL_SCALE'] = 0.2
     sex.config['VERBOSE_TYPE'] = "QUIET"
     sex.config['MAG_ZEROPOINT'] = 25.0
-    sex.config['BACK_SIZE'] = 128
+    sex.config['BACK_SIZE'] = 256
     sex.config['BACK_TYPE'] = "AUTO"
     sex.config['BACKPHOTO_TYPE'] = "LOCAL"
     sex.config['BACK_FILTERSIZE'] = 3
+    sex.config['DETECT_THRESH'] = 2
+    sex.config['ANALYSIS_THRESH'] = 2
     sex.config['SEEING_FWHM'] = 0.6
     sex.config['GAIN'] = 5.0
     sex.config['SATUR_LEVEL'] = 45000
     sex.config['MAG_GAMMA'] = 4.0
-    sex.config['PHOT_APERTURES'] = [1,2,2.5,3,3.25,3.5,3.75,4,4.25,4.5,5,5.5,6,6.5,7,8,12,14,18,20,25]
     sex.config['MEMORY_OBJSTACK'] = 30000
     sex.config['MEMORY_PIXSTACK'] = 6000000
     sex.config['MEMORY_BUFSIZE'] = 16384
+    return sex
+
+def getScampSextractor():
+    sex = getDefaultSextractor()
+    sex.config['CATALOG_TYPE'] = 'FITS_LDAC'
+    sex.config['PARAMETERS_LIST'] = ['NUMBER','X_IMAGE','Y_IMAGE','XWIN_IMAGE','YWIN_IMAGE','ELLIPTICITY','ERRAWIN_IMAGE','ERRBWIN_IMAGE','ERRTHETAWIN_IMAGE','FLUX_AUTO','FLUXERR_AUTO','FLAGS','FLAGS_WEIGHT','FLUX_RADIUS']
+    filters = getFilters()
+    sex.config['FILTER_MASK'] = filters['gauss_3.0_5x5']
+
+    return sex
+
+def getSextractor(**kwargs):
+    sex = getDefaultSextractor()
+    sex.config['PHOT_APERTURES'] = [1,2,2.5,3,3.25,3.5,3.75,4,4.25,4.5,5,5.5,6,6.5,7,8,12,14,18,20,25]
     sex.config['CHECKIMAGE_TYPE'] = ["BACKGROUND", "APERTURES"]
     sex.config['CHECKIMAGE_NAME'] = ["back.fits", "apertures.fits"]
-    sex.config['PARAMETERS_LIST'] = ['NUMBER', 'X_IMAGE', 'Y_IMAGE'] + ['MAG_APER(%d)'%(i+1) for i in range(len(sex.config['PHOT_APERTURES']))] + ['MAG_AUTO', 'ELLIPTICITY', 'FWHM_IMAGE', 'MU_MAX', 'CLASS_STAR']
+    sex.config['PARAMETERS_LIST'] = ['NUMBER', 'X_IMAGE', 'Y_IMAGE'] + ['MAG_APER(%d)'%(i+1) for i in range(len(sex.config['PHOT_APERTURES']))] + ['FLUX_MAX', 'FLUX_AUTO', 'MAG_AUTO', 'ELLIPTICITY', 'FWHM_IMAGE', 'MU_MAX', 'CLASS_STAR']
     for (key, value) in kwargs.iteritems():
         sex.config[key] = value
     return sex
-
 
 def getInitialObjects():
     filters = getFilters()
@@ -608,14 +624,14 @@ def normaliseRadial(catalog, sex, maskExtended):
     
     return catalogFinal
     
-def getClassifier(catalog, mask, strength=30):
+def getClassifier(catalog, mask, strength=10):
     y = mask * 1
     X = catalog.view(np.float64).reshape(catalog.shape + (-1,))[:, 3:]
     
     debug("Creating classifier")
     # Create and fit an AdaBoosted decision tree
     bdt = AdaBoostClassifier(DecisionTreeClassifier(max_depth=2), algorithm="SAMME", n_estimators=strength)
-    bdt.fit(X, y, sample_weight=1+10*y)
+    bdt.fit(X, y, sample_weight=1+40*y)
     debug("Classifier created")
     bdt.label = "Boosted Decision Tree"
     return bdt
@@ -627,7 +643,7 @@ def getGC(classifier, catalog, ellipticity=0.25):
     gal = z & (catalog['ELLIPTICITY'] > ellipticity)
     galaxies = (catalog[gal][['X_IMAGE', 'Y_IMAGE']])
     np.savetxt("../../../galaxies.txt", galaxies)
-    return catalog[gcs]
+    return gcs
     
 def testSelfClassify(classifier, catalog, y):
     X = catalog.view(np.float64).reshape(catalog.shape + (-1,))[:, 3:]
@@ -643,6 +659,8 @@ def testSelfClassify(classifier, catalog, y):
     debug("False negative: %0.1f%%" % (100.0 * incorrectExtended.sum() / (y).sum()))
     debug("Point correct: %0.1f%%" % (100.0 * correctPoint.sum() / (~y).sum()))
     debug("False positive: %0.1f%%" % (100.0 * incorrectPoint.sum() / (~y).sum()))
+    
+    
     
     if debugPlot:
         fig = plt.figure(figsize=(8,8))
@@ -675,13 +693,13 @@ def showInDS9(images, catalog=None):
         commandline += " ".join(names)
         median = np.median(images[0])
         commandline += " -scale limits %d %d" % (median, median + 50)
+        colours = ["red", "green", "cyan"]
         if catalog is not None:
             cat = "catalog.txt"
             catFile = tempDir + os.sep + cat
             np.savetxt(catFile, catalog[['X_IMAGE', 'Y_IMAGE']])
-            commandline += " -catalog import tsv %s -catalog psky image" % catFile
+            commandline += " -catalog import tsv %s -catalog psky image -catalog symbol shape box -catalog symbol size 40 -catalog symbol size2 40 -catalog symbol color %s -catalog update " % (catFile, colours[0])
         
-        print(commandline)
         f = "toRun.sh"
         filename = tempDir + os.sep + f
         with open(filename, 'w') as fil:
@@ -701,17 +719,195 @@ def showInDS9(images, catalog=None):
         raise
     finally:
         try:
-            #shutil.rmtree(tempDir)  # delete directory
+            shutil.rmtree(tempDir)  # delete directory
             pass
         except OSError as exc:
             if exc.errno != errno.ENOENT:
                 raise  # re-raise exception
+                
+                
+def getPSFStars(catalog, sex, skyFlux):
+    debug("Getting PSF stars")
 
+    debug("\tEnforcing maximum flux thresholds")
+    psfMask = (catalog['FLUX_MAX'] > 5 * skyFlux) & (catalog['FLUX_MAX'] < 0.8 * sex.config['SATUR_LEVEL'])    
+
+    debug("\tEnforcing CLASS_STAR")
+    psfMask = psfMask & (catalog['CLASS_STAR'] > 0.8)
+    
+    debug("\tEnforcing ELLIPTICITY")
+    psfMask = psfMask & (catalog['ELLIPTICITY'] < 0.1)
+    
+    debug("\tEnforcing minimum distance from each source")
+    for i,row in enumerate(catalog):
+        if psfMask[i]:
+            dists = np.sqrt((catalog['X_IMAGE'] - row['X_IMAGE'])**2 + (catalog['Y_IMAGE'] - row['Y_IMAGE'])**2)
+            minDist = np.min(dists[dists > 1e-6])
+            psfMask[i] = minDist > (row['FWHM_IMAGE'] * 3 + 15)
+            
+    debug("\tReturning mask for %d candidate masks" % psfMask.sum())
+    return psfMask
+
+def getPSF(image, catalog):
+    from photutils.psf import create_prf
+    over = 1
+    bigImage = resize(image, np.array(image.shape)*over)
+    pix = 9
+    prf_discrete = create_prf(bigImage, zip(catalog['X_IMAGE']*over, catalog['Y_IMAGE']*over), pix, fluxes=catalog['FLUX_AUTO'], subsampling=1)
+    
+    xs = np.arange(0, pix, 0.1)
+    ys = np.arange(0, pix, 0.1)
+    
+    xso = np.arange(0, pix)
+    yso = np.arange(0, pix)
+    
+    data = scipy.interpolate.interp2d(xso, yso, prf_discrete._prf_array, kind="cubic")(xs, ys)
+    r = 1
+    c = 1
+    fig, axes = plt.subplots(nrows=r, ncols=c)
+    fig.set_size_inches(12, 9)
+    # Plot kernels
+    #m = prf_discrete._prf_array.max()
+    #z = prf_discrete._prf_array.min()
+    #for i in range(c):
+    #    for j in range(r):
+    #        prf_image = prf_discrete._prf_array[i, j]
+    #        im = axes[i, j].imshow(prf_image, vmin=z, vmax=m, interpolation='None', cmap='viridis')
+    im = axes.imshow(data, interpolation="none", cmap="viridis")
+    cax = fig.add_axes([0.9, 0.1, 0.03, 0.8])
+    plt.colorbar(im, cax=cax)
+    plt.subplots_adjust(left=0.05, right=0.85, top=0.95, bottom=0.05)
+    plt.show()
+    return data
+'''
+def substractPSF(data, catalog, prf_discrete, gcsMask):
+    from photutils.psf import psf_photometry
+    from photutils.psf import subtract_psf
+    debug("Subtract PSF fit")
+    coords = zip(catalog['X_IMAGE'], catalog['Y_IMAGE'])
+    
+    debug("\tGetting fluxes")
+    fluxes_photutils = psf_photometry(data, coords, prf_discrete)
+    debug("\tGetting residuals")
+    residuals = subtract_psf(data.copy(), prf_discrete, coords, fluxes_photutils)
+    debug("\tShowing in ds9")
+    showInDS9([residuals], catalog=catalog[gcsMask])'''
+
+def runIshape(image, fitsPath, catalog, psf):
+    try:
+        debug("Running ishape on given image")
+        tempDir = tempfile.mkdtemp()
+        debug("\tGenerating temp directory at %s" % tempDir)
+        fitsFile = fits.open(fitsPath)
+        tempFits = tempDir + os.sep + "image.fits"
+        fitsFile[0].data = image.astype(np.float32)
+        debug("\tWriting image fits")
+        fitsFile.writeto(tempFits)
+        #fitsFile.close()
+        
+        tempPSF = tempDir + os.sep + "psf.fits"
+        #hdu = fits.PrimaryHDU(psf)
+        #hdu.writeto(tempPSF)
+        fitsFile[0].data = psf.astype(np.float32)
+        debug("\twriting PSF fits")
+        fitsFile.writeto(tempPSF)
+        fitsFile.close()
+
+        tempCoord = tempDir + os.sep + "coords.txt"
+        np.savetxt(tempCoord, catalog[['X_IMAGE', 'Y_IMAGE']], fmt="%0.2f")
+        
+        
+        argumentFile = tempDir + os.sep + "command.bl"
+        with open(argumentFile, 'w') as f:
+            f.write("ishape %s %s %s\n" % (tempFits, tempCoord, tempPSF))
+        
+        commandline = 'bl < %s' % argumentFile
+        
+        #commandline = "bl < /Users/shinton/Downloads/bl/test.bl"
+        debug("\tExecuting baolab and ishape")
+        p = subprocess.Popen(["/bin/bash", "-i", "-c", commandline], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+        output = p.communicate() #now wait
+        
+        
+        print(output[0])
+        print(output[1])
+        return output
+
+    except:
+        raise
+    finally:
+        try:
+            shutil.rmtree(tempDir)  # delete directory
+            pass
+        except OSError as exc:
+            if exc.errno != errno.ENOENT:
+                raise  # re-raise exception
+    
+    
+def getScamped(fitsPath, image):
+    # Create temp directory, put image in it, run sextractor
+    debug("Creating polynomial distortion parameters using scamp")
+    tempDir = tempfile.mkdtemp()
+    debug("\tGenerating temp directory at %s" % tempDir)
+    fitsFile = fits.open(fitsPath)
+    tempFits = tempDir + os.sep + "image.fits"
+    fitsFile[0].data = image.astype(np.float32)
+    debug("\tWriting image fits")
+    fitsFile.writeto(tempFits)
+    fitsFile.close()
+    
+    # Use extractor output to run scamp
+    sex = getScampSextractor()
+    sex.config['CATALOG_NAME'] = "image.cat"
+    debug('\tRunning sextractor for scamp')
+    data = sex.run(tempFits, path=sexPath, clean=False, fileOutput=True, cwd=tempDir)
+    print(data['output'])
+    catalogName = tempDir + os.sep + data['filename']
+    
+    debug('\tInvoking scamp using output catalog')
+    env = os.environ.copy()
+    env['PATH'] = '/usr/local/bin:'+env['PATH']
+    try:
+        output = subprocess.check_output("/bin/bash -i -c \"" + scampPath + " " + data['filename'] + "\"", stderr=subprocess.STDOUT, shell=True, cwd=tempDir, env=env)
+    except subprocess.CalledProcessError, e:
+        print(e.output)
+        
+    
+    debug('\tScamp output:\n')
+    debug(output)
+    
+    debug('\tGetting .head file')
+    headFile = tempDir + os.sep + "image.head"
+    if (not os.path.exists(headFile)):
+        raise Exception("Head file not found at " + headFile)
+        
+    debug("\tRunning missfits to incorporate scamp header")
+    try:
+        output2 = subprocess.check_output("/bin/bash -i -c \"" + missfitsPath + " image.fits\"", stderr=subprocess.STDOUT, shell=True, cwd=tempDir, env=env)
+    except subprocess.CalledProcessError, e:
+        print(e.output)
+        
+    debug("\tMissfits output:\n")
+    debug(output)
+    
+    debug("\tReturning path to modified fits file")
+    return tempFits
+    # Return path to this fits file
+
+def cleanDirectory(d):
+    try:
+        shutil.rmtree(d)  # delete directory
+        pass
+    except OSError as exc:
+        if exc.errno != errno.ENOENT:
+            raise  # re-raise exception
+    
 ## Get the fits file
+'''
 fitsFile = fits.open(fitsPath)
 imageOriginal = fitsFile[0].data
 fitsFile.close()
-'''
+
 ## Add mask to help out the median convolution
 mask, imageMasked = getMaskedImage(imageOriginal)
 
@@ -724,8 +920,12 @@ imageSubtracted = getSubtracted(imageOriginal, imageBackground, fitsPath)
 ## Find the correct sky flux
 skyFlux, imageSky = addSkyFlux(imageOriginal, imageSubtracted)
 
+scampFits = getScamped(fitsPath, imageSubtracted)
+
+#'''
+'''
 ## Get the object catalogs from sextractor
-catalog, sex = getCatalogs(fitsPath, imageSubtracted)
+catalog, sex = getCatalogs(scampFits, imageSubtracted)
 
 ## Trim Catalogs
 catalogTrimmed = trimCatalog(catalog, imageOriginal, mask, sex)
@@ -740,17 +940,26 @@ catalogFinal = normaliseRadial(catalogTrimmed, sex, maskExtended)
 #visualiseHigherDimensions(catalogFinal, maskExtended)
 #checkForClustering(catalogTrimmed)
 #showStats(catalogFinal, maskExtended)
-
+'''
 classifier = getClassifier(catalogFinal, maskExtended)
 
 
-gcs = testSelfClassify(classifier, catalogFinal, maskExtended)
-'''
-
-pid = showInDS9([imageOriginal], catalog=gcs)
+gcsMask = testSelfClassify(classifier, catalogFinal, maskExtended)
 
 
+#psfMask = getPSFStars(catalogFinal, sex, skyFlux)
+#'''
 
+#psf = getPSF(imageSky, catalogFinal[psfMask])
+
+#substractPSF(imageSky, catalogFinal, prf, gcsMask)
+#pid = showInDS9([imageOriginal], catalog=catalogFinal[psfMask])
+
+
+#o = runIshape(imageSky, fitsPath, catalogFinal[gcsMask], psf)
+
+
+#cleanDirectory(os.path.dirname(scampFits))
 
 
 
