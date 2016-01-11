@@ -28,6 +28,8 @@ import subprocess
 import stat
 debugFlag = True
 debugPlot = True
+urekaPath = "/Users/shinton/Software/Ureka"
+baolabScript = '/Users/shinton/Software/baolab-0.94.1e/als2bl.cl'
 sexPath = '/Users/shinton/Software/Ureka/bin/sex'
 scampPath = '/usr/local/bin/scamp'
 missfitsPath = '/usr/local/bin/missfits'
@@ -726,7 +728,7 @@ def showInDS9(images, catalog=None):
                 raise  # re-raise exception
                 
                 
-def getPSFStars(catalog, sex, skyFlux):
+def getPSFStars(catalog, sex, skyFlux, image, check=3):
     debug("Getting PSF stars")
 
     debug("\tEnforcing maximum flux thresholds")
@@ -745,53 +747,79 @@ def getPSFStars(catalog, sex, skyFlux):
             minDist = np.min(dists[dists > 1e-6])
             psfMask[i] = minDist > (row['FWHM_IMAGE'] * 3 + 15)
             
-    debug("\tReturning mask for %d candidate masks" % psfMask.sum())
-    return psfMask
+            
+    
+    debug("\tEnforcing no overflow")
+    threshold = sex.config['SATUR_LEVEL']
+    for i,row in enumerate(catalog):
+        if psfMask[i]:
+            x = np.round(row['X_IMAGE']).astype(np.int)
+            y = np.round(row['Y_IMAGE']).astype(np.int)
+            psfMask[i] = psfMask[i] and np.all(image[y-check:y+check, x-check:x+check] < threshold)
+            psfMask[i] = psfMask[i] and np.all(image[y-1:y+1, x-1:x+1] > 4 * skyFlux)
+            psfMask[i] = psfMask[i] and np.all(image[y-check:y+check, x-check:x+check] > 0)
+            
+    ysplit = image.shape[0] / 2;
+    psfMask1 = psfMask & (catalog['Y_IMAGE'] > ysplit)
+    psfMask2 = psfMask & (catalog['Y_IMAGE'] < ysplit)
+    
+            
+    debug("\tReturning mask for %d,%d candidate masks" % (psfMask1.sum(), psfMask2.sum()))
+    return psfMask1, psfMask2
 
-def getPSF(image, catalog):
-    from photutils.psf import create_prf
-    over = 1
-    bigImage = resize(image, np.array(image.shape)*over)
-    pix = 9
-    prf_discrete = create_prf(bigImage, zip(catalog['X_IMAGE']*over, catalog['Y_IMAGE']*over), pix, fluxes=catalog['FLUX_AUTO'], subsampling=1)
+def getPSF(fitsPath, catalog, psfs, scampFits):
+    debug("Generating PSFs")
+    tempDir = os.path.dirname(scampFits)
     
-    xs = np.arange(0, pix, 0.1)
-    ys = np.arange(0, pix, 0.1)
+    # Copy image
+    debug("\tCopying image fits to temp directory")
+    shutil.copy(fitsPath, tempDir + os.sep + "imgPsf.fits")
+
+    # Save psf locations
+    debug("\tCreating PSF star position lists")
+    for i,psf in enumerate(psfs):
+        np.savetxt(tempDir + os.sep + "%d.cat"%i, catalog[psf][['X_IMAGE', 'Y_IMAGE']], fmt="%0.2f")
+
+
+    # Update environ
+    env = os.environ.copy()
+    env['PATH'] = ("%s/variants/common/bin:%s/bin:%s/python/bin:" % (urekaPath, urekaPath, urekaPath))+env['PATH']
+
+
+    # Save script
+    script = '''cd %s
+daophot
+digiphot
+phot imgPsf %s output=default scale=1 fwhmpsf=3  sigma=3.5 readnoi=10 gain=GAIN calgori=centroid cbox=5 salgori=mode annulus=25 dannulus=30  aperture=5,8,10,15 zmag=25 interactive=no verify-
+pstselect imgPsf photfile=default pstfile=default maxnpsf=300 psfrad=17 fitrad=3 verify-
+psf imgPsf photfile=default pstfile=default psfimage=default opstfile=default groupfile=default scale=1 fwhmpsf=3  sigma=3.5 readnoi=10 gain=GAIN function=gauss varorder=1 saturate=no nclean=0 psfrad=17 fitrad=3 interac=no verify-
+task als2bl = %s
+als2bl imgPsf.psf.1.fits %s
+
+.exit''' % (tempDir, "%s", baolabScript, "%s")
+
+    # Run script for each psf
+    debug("\tSaving script and executing Pyraf")
+    for i,psf in enumerate(psfs):
+        filename = tempDir + os.sep + "script.cl"
+        with open(filename, 'w') as f:
+            f.write(script % ("%d.cat"%i, "psf%d.fits"%i))
+        debug("\tExecuting pyraf commands for psf catalog %d"%i)
+            
+        # Run script
+        with open('test.log', 'w') as ff:
+
+            p = subprocess.Popen(["/bin/bash", "-i", "-c", "echo \"WHY SO SERIOUS?\" && pyraf -x -s < script.cl"], env=env, stderr=subprocess.PIPE, stdout=subprocess.PIPE, cwd=tempDir)
+            for c in iter(lambda: p.stdout.read(1), ''):
+                sys.stdout.write(c)
+                ff.write(c)        
+        #output = p.communicate() #now wait
+        
+        #print(output[0])
+        #print(output[1])
     
-    xso = np.arange(0, pix)
-    yso = np.arange(0, pix)
     
-    data = scipy.interpolate.interp2d(xso, yso, prf_discrete._prf_array, kind="cubic")(xs, ys)
-    r = 1
-    c = 1
-    fig, axes = plt.subplots(nrows=r, ncols=c)
-    fig.set_size_inches(12, 9)
-    # Plot kernels
-    #m = prf_discrete._prf_array.max()
-    #z = prf_discrete._prf_array.min()
-    #for i in range(c):
-    #    for j in range(r):
-    #        prf_image = prf_discrete._prf_array[i, j]
-    #        im = axes[i, j].imshow(prf_image, vmin=z, vmax=m, interpolation='None', cmap='viridis')
-    im = axes.imshow(data, interpolation="none", cmap="viridis")
-    cax = fig.add_axes([0.9, 0.1, 0.03, 0.8])
-    plt.colorbar(im, cax=cax)
-    plt.subplots_adjust(left=0.05, right=0.85, top=0.95, bottom=0.05)
-    plt.show()
-    return data
-'''
-def substractPSF(data, catalog, prf_discrete, gcsMask):
-    from photutils.psf import psf_photometry
-    from photutils.psf import subtract_psf
-    debug("Subtract PSF fit")
-    coords = zip(catalog['X_IMAGE'], catalog['Y_IMAGE'])
-    
-    debug("\tGetting fluxes")
-    fluxes_photutils = psf_photometry(data, coords, prf_discrete)
-    debug("\tGetting residuals")
-    residuals = subtract_psf(data.copy(), prf_discrete, coords, fluxes_photutils)
-    debug("\tShowing in ds9")
-    showInDS9([residuals], catalog=catalog[gcsMask])'''
+
 
 def runIshape(image, fitsPath, catalog, psf):
     try:
@@ -922,8 +950,7 @@ skyFlux, imageSky = addSkyFlux(imageOriginal, imageSubtracted)
 
 scampFits = getScamped(fitsPath, imageSubtracted)
 
-#'''
-'''
+
 ## Get the object catalogs from sextractor
 catalog, sex = getCatalogs(scampFits, imageSubtracted)
 
@@ -940,14 +967,17 @@ catalogFinal = normaliseRadial(catalogTrimmed, sex, maskExtended)
 #visualiseHigherDimensions(catalogFinal, maskExtended)
 #checkForClustering(catalogTrimmed)
 #showStats(catalogFinal, maskExtended)
+#'''
 '''
 classifier = getClassifier(catalogFinal, maskExtended)
 
 
 gcsMask = testSelfClassify(classifier, catalogFinal, maskExtended)
 
+#'''
+#psfMask1, psfMask2 = getPSFStars(catalogFinal, sex, skyFlux, imageOriginal)
+getPSF(fitsPath, catalogFinal, [psfMask1, psfMask2], scampFits)
 
-#psfMask = getPSFStars(catalogFinal, sex, skyFlux)
 #'''
 
 #psf = getPSF(imageSky, catalogFinal[psfMask])
