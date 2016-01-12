@@ -770,7 +770,13 @@ def getPSFStars(catalog, sex, skyFlux, image, check=3):
 def getPSF(fitsPath, catalog, psfs, scampFits):
     debug("Generating PSFs")
     tempDir = os.path.dirname(scampFits)
-    
+    tempDir = tempDir + os.sep + "psfs"
+    try:
+        shutil.rmtree(tempDir)  # delete directory
+    except OSError as exc:
+        if exc.errno != errno.ENOENT:
+            raise  # re-raise exception
+    os.mkdir(tempDir)
     # Copy image
     debug("\tCopying image fits to temp directory")
     shutil.copy(fitsPath, tempDir + os.sep + "imgPsf.fits")
@@ -784,8 +790,7 @@ def getPSF(fitsPath, catalog, psfs, scampFits):
     # Update environ
     env = os.environ.copy()
     env['PATH'] = ("%s/variants/common/bin:%s/bin:%s/python/bin:" % (urekaPath, urekaPath, urekaPath))+env['PATH']
-
-
+    env['PYTHONEXECUTABLE'] = "%s/python/bin/python" % urekaPath
     # Save script
     script = '''cd %s
 daophot
@@ -798,26 +803,32 @@ als2bl imgPsf.psf.1.fits %s
 
 .exit''' % (tempDir, "%s", baolabScript, "%s")
 
+
     # Run script for each psf
+    psfNames = ["psf%d.fits"%i for i in range(len(psfs))]
+    
     debug("\tSaving script and executing Pyraf")
-    for i,psf in enumerate(psfs):
+    for (i,psf),name in zip(enumerate(psfs), psfNames):
         filename = tempDir + os.sep + "script.cl"
         with open(filename, 'w') as f:
-            f.write(script % ("%d.cat"%i, "psf%d.fits"%i))
+            f.write(script % ("%d.cat"%i, name))
         debug("\tExecuting pyraf commands for psf catalog %d"%i)
             
         # Run script
-        with open('test.log', 'w') as ff:
-
-            p = subprocess.Popen(["/bin/bash", "-i", "-c", "echo \"WHY SO SERIOUS?\" && pyraf -x -s < script.cl"], env=env, stderr=subprocess.PIPE, stdout=subprocess.PIPE, cwd=tempDir)
-            for c in iter(lambda: p.stdout.read(1), ''):
-                sys.stdout.write(c)
-                ff.write(c)        
-        #output = p.communicate() #now wait
+        p = subprocess.Popen(["/bin/bash", "-i", "-c", "pyraf -x -s < script.cl && cp %s .."%name], env=env, stderr=subprocess.PIPE, stdout=subprocess.PIPE, cwd=tempDir)   
+        output = p.communicate() #now wait
+        debug(output[0])
+        debug(output[1])
         
-        #print(output[0])
-        #print(output[1])
+    realTempDir = os.path.dirname(scampFits)
+    for n in psfNames:
+        name = realTempDir + os.sep + n
+        if not os.path.isfile(name):
+            raise "Expected file %s not found" % name
+        
+    shutil.rmtree(tempDir)
     
+    return psfNames
     
 
 
@@ -866,7 +877,6 @@ def runIshape(image, fitsPath, catalog, psf):
     finally:
         try:
             shutil.rmtree(tempDir)  # delete directory
-            pass
         except OSError as exc:
             if exc.errno != errno.ENOENT:
                 raise  # re-raise exception
@@ -976,7 +986,7 @@ gcsMask = testSelfClassify(classifier, catalogFinal, maskExtended)
 
 #'''
 #psfMask1, psfMask2 = getPSFStars(catalogFinal, sex, skyFlux, imageOriginal)
-getPSF(fitsPath, catalogFinal, [psfMask1, psfMask2], scampFits)
+psfFitsFiles = getPSF(fitsPath, catalogFinal, [psfMask1, psfMask2], scampFits)
 
 #'''
 
