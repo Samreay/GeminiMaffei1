@@ -224,8 +224,8 @@ class Tile(Reducer):
             # Run script
             p = subprocess.Popen(["/bin/bash", "-i", "-c", "pyraf -x -s < script.cl && cp %s .."%name], env=env, stderr=subprocess.PIPE, stdout=subprocess.PIPE, cwd=os.path.abspath(self.tempDir))   
             output = p.communicate() #now wait
-            self._debug(output[0])
-            self._debug(output[1])
+            #self._debug(output[0])
+            #self._debug(output[1])
             
         resultNames = []
         for n in psfNames:
@@ -269,7 +269,7 @@ class Tile(Reducer):
             for model,index in zip(models, indexes):
                 argumentFile = tempDir + os.sep + "command.bl"
                 with open(argumentFile, 'w') as f:
-                    f.write("cd %s\nishape %s %s %s LOGMODE=1 SHAPE=%s INDEX=%0.1f FITRAD=3 CALCERR=no\n" % (tempDir, fitsPath, "coords%d.txt"%i, os.path.abspath(psf), model, index))
+                    f.write("cd %s\nishape %s %s %s LOGMODE=1 SHAPE=%s INDEX=%0.1f FITRAD=5 CALCERR=no\n" % (tempDir, fitsPath, "coords%d.txt"%i, os.path.abspath(psf), model, index))
                 
                 commandline = 'bl < %s' % argumentFile
                 
@@ -294,7 +294,7 @@ class Tile(Reducer):
         shape = ""
         for r in raw:
             sep = r.split()
-            if sep[0] == "@@F" and sep[6] != "OBJ-ERROR":
+            if sep[0] == "@@F" and sep[6] != "OBJ-ERROR" and sep[6] != "FIT-ERROR":
                 x = sep[2]
                 y = sep[3]
                 shape = sep[5]

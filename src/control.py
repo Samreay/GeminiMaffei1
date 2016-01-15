@@ -18,7 +18,7 @@ tiles = [Tile(os.path.abspath(tileDir + os.sep + f), classifier, tempParentDir=t
 
 gcs = None
 for tile in tiles:
-    print("Getting GCs for tile %s" % tile)
+    print("Getting GCs for tile %s" % tile.subName)
     newGCs = tile.getGlobalClusters()
     if gcs is None:
         gcs = newGCs
