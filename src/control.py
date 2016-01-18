@@ -25,10 +25,11 @@ for tile in tiles:
     else:
         gcs = np.concatenate((gcs, newGCs))
 
-    
+'''
 
 mosaics = [Mosaic(os.path.abspath(mosaicDir + os.sep + f), tempParentDir=tempParentDir) for f in os.listdir(mosaicDir) if f.endswith(".fits")]
 mosaics = [mosaics[2]]
 for mosaic in mosaics:
     mosaic.importCatalog(gcs)
     mosaic.show()
+'''

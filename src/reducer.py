@@ -246,6 +246,7 @@ class Reducer(object):
     def getDefaultSextractor(self):
         # Create a SExtractor instance
         sex = sextractor.SExtractor()
+                
         
         # Modify the SExtractor configuration
         sex.config['PIXEL_SCALE'] = 0.2
@@ -266,6 +267,15 @@ class Reducer(object):
         sex.config['MEMORY_PIXSTACK'] = 6000000
         sex.config['MEMORY_BUFSIZE'] = 16384
         sex.config['DEBLEND_MINCONT'] = 0.001
+        
+        if self.fitsPath is not None:
+            potSeeing = os.path.dirname(self.fitsPath) + os.sep + "seeing_fwhm"
+            if os.path.exists(potSeeing):
+                res = np.genfromtxt(potSeeing, dtype=None)
+                for f,s in res:
+                    if f == os.path.basename(self.fitsPath):
+                        sex.config['SEEING_FWHM'] = sex.config['PIXEL_SCALE'] * s
+                        self._debug("seeing fwhm updated to be %0.2f" % sex.config['SEEING_FWHM'])
         return sex
     
     def getScampSextractor(self):
