@@ -4,7 +4,6 @@ import tempfile
 import shutil
 import errno
 import subprocess
-import re
 
 import numpy as np
 import matplotlib, matplotlib.pyplot as plt
@@ -126,119 +125,9 @@ class Tile(Reducer):
         self._debug("\tNew catalog has %d gcs, compared to %d previously" % (newMask.sum(), mask.sum()))
         return catalogNew
         
-    def splitCatalog(self, image, catalog):
-        ysplit = image.shape[0] / 2;
-        psfMask1 = (catalog['Y_IMAGE'] > ysplit)
-        psfMask2 = (catalog['Y_IMAGE'] < ysplit)
-        return [psfMask1, psfMask2]
-        
-        
-    def getPSFStars(self, fitsPath, catalog, check=3, threshold=50000):
-        image = fits.getdata(fitsPath)
-        skyFlux = np.median(image)
-        
-        self._debug("Getting PSF stars")
-        self._debug("\tEnforcing maximum flux thresholds")
-        psfMask = (catalog['FLUX_MAX'] > 5 * skyFlux) & (catalog['FLUX_MAX'] < 0.8 * threshold)  
 
-        self._debug("\tEnforcing CLASS_STAR")
-        psfMask = psfMask & (catalog['CLASS_STAR'] > 0.8)
         
-        self._debug("\tEnforcing ELLIPTICITY")
-        psfMask = psfMask & (catalog['ELLIPTICITY'] < 0.1)
-        
-        self._debug("\tEnforcing minimum distance from each source")
-        for i,row in enumerate(catalog):
-            if psfMask[i]:
-                dists = np.sqrt((catalog['X_IMAGE'] - row['X_IMAGE'])**2 + (catalog['Y_IMAGE'] - row['Y_IMAGE'])**2)
-                minDist = np.min(dists[dists > 1e-6])
-                psfMask[i] = minDist > (row['FWHM_IMAGE'] * 3 + 15)
-                
-        
-        self._debug("\tEnforcing no overflow")
-        for i,row in enumerate(catalog):
-            if psfMask[i]:
-                x = np.round(row['X_IMAGE']).astype(np.int)
-                y = np.round(row['Y_IMAGE']).astype(np.int)
-                psfMask[i] = psfMask[i] and np.all(image[y-check:y+check, x-check:x+check] < threshold)
-                psfMask[i] = psfMask[i] and np.all(image[y-1:y+1, x-1:x+1] > 4 * skyFlux)
-                psfMask[i] = psfMask[i] and np.all(image[y-check:y+check, x-check:x+check] > 0)
-        
-        psfMasks = self.splitCatalog(image, catalog)
-        for m in psfMasks:
-            m &= psfMask
-        
-                
-        self._debug("\tReturning mask for %d,%d candidate masks" % (psfMasks[0].sum(), psfMasks[1].sum()))
-        return psfMasks
-        
-    def getPSFs(self, fitsPath, catalog):
-        self._debug("Generating PSFs")
-        
-        
-        if not self.redo:
-            pattern = re.compile("^psf[0-9]\.fits$")
-            generated = [os.path.abspath(self.outDir + os.sep + f) for f in os.listdir(self.outDir) if pattern.match(f) is not None]
-            if len(generated) > 0:
-                self._debug("Found existing PSF files: %s"%generated)
-                return generated
-                
-        psfMasks = self.getPSFStars(fitsPath, catalog)
-        
-        # Copy image
-        self._debug("\tCopying image fits to temp directory")
-        shutil.copy(fitsPath, self.tempDir + os.sep + "imgPsf.fits")
-    
-        # Save psf locations
-        self._debug("\tCreating PSF star position lists")
-        for i,psf in enumerate(psfMasks):
-            np.savetxt(self.tempDir + os.sep + "%d.cat"%i, catalog[psf][['X_IMAGE', 'Y_IMAGE']], fmt="%0.2f")
-        # Update environ
-        env = os.environ.copy()
-        env['PATH'] = ("%s/variants/common/bin:%s/bin:%s/python/bin:" % (urekaPath, urekaPath, urekaPath))+env['PATH']
-        env['PYTHONEXECUTABLE'] = "%s/python/bin/python" % urekaPath
-        # Save script
-        script = '''cd %s
-    daophot
-    digiphot
-    phot imgPsf %s output=default scale=1 fwhmpsf=3  sigma=3.5 readnoi=10 gain=GAIN calgori=centroid cbox=5 salgori=mode annulus=25 dannulus=30  aperture=5,8,10,15 zmag=25 interactive=no verify-
-    pstselect imgPsf photfile=default pstfile=default maxnpsf=300 psfrad=17 fitrad=3 verify-
-    psf imgPsf photfile=default pstfile=default psfimage=default opstfile=default groupfile=default scale=1 fwhmpsf=3  sigma=3.5 readnoi=10 gain=GAIN function=gauss varorder=1 saturate=no nclean=0 psfrad=17 fitrad=3 interac=no verify-
-    task als2bl = %s
-    als2bl imgPsf.psf.1.fits %s
-    
-    .exit''' % (os.path.abspath(self.tempDir), "%s", baolabScript, "%s")
-    
-    
-        # Run script for each psf
-        psfNames = ["psf%d.fits"%i for i in range(len(psfMasks))]
-        
-        self._debug("\tSaving script and executing Pyraf")
-        for i,name in enumerate(psfNames):
-            filename = self.tempDir + os.sep + "script.cl"
-            with open(filename, 'w') as f:
-                script2 = script % ("%d.cat"%i, name)
-                f.write(script2)
-            self._debug("\tExecuting pyraf commands for psf catalog %d"%i)
-                
-            # Run script
-            p = subprocess.Popen(["/bin/bash", "-i", "-c", "pyraf -x -s < script.cl && cp %s .."%name], env=env, stderr=subprocess.PIPE, stdout=subprocess.PIPE, cwd=os.path.abspath(self.tempDir))   
-            output = p.communicate() #now wait
-            #self._debug(output[0])
-            #self._debug(output[1])
-            
-        resultNames = []
-        for n in psfNames:
-            name = self.tempDir + os.sep + n
-            if not os.path.isfile(name):
-                raise "Expected file %s not found" % name
-            else:
-                fullName = os.path.abspath(self.outDir + os.sep + n)
-                shutil.copy(name, fullName)
-                resultNames.append(fullName)
-            
-        
-        return resultNames
+
         
             
     def runIshape(self, fitsPath, catalog, gcsMask):

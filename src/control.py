@@ -10,9 +10,9 @@ tileDir = "../resources/tiles"
 mosaicDir = "../resources/mosaic"
 
 
-classifier = Classifier("../resources/classified/candidates.fits", "../resources/classified/candidates.txt", tempParentDir=tempParentDir)
+classifier = Classifier("../resources/classified/candidates.fits", "../resources/classified/candidates.txt", tempParentDir=tempParentDir, debugPlot=True)
 classifier.getClassifier()
-
+'''
 
 tiles = [Tile(os.path.abspath(tileDir + os.sep + f), classifier, tempParentDir=tempParentDir) for f in os.listdir(tileDir) if os.path.isfile(tileDir + os.sep + f) and f.endswith(".fits")]
 
@@ -25,7 +25,7 @@ for tile in tiles:
     else:
         gcs = np.concatenate((gcs, newGCs))
 
-'''
+
 
 mosaics = [Mosaic(os.path.abspath(mosaicDir + os.sep + f), tempParentDir=tempParentDir) for f in os.listdir(mosaicDir) if f.endswith(".fits")]
 mosaics = [mosaics[2]]
