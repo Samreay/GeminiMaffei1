@@ -66,9 +66,9 @@ class Reducer(object):
         self.tempDirSetup = True
         self._debug("Generating temp directory at %s for classifier" % self.tempDir)
 
-    def getCatalog(self, fitsPath):   
+    def getCatalog(self, fitsPath, ishape=False):   
         self.name = os.path.splitext(os.path.basename(fitsPath))[0]
-        catalogOutFile = self.outDir + os.sep + self.name + "Cat.npy"
+        catalogOutFile = self.outDir + os.sep + self.name + ("_ishape_" if ishape else "") + "Cat.npy"
         if not self.redo and os.path.exists(catalogOutFile):
             self._debug("Loading existing catalog")
             self.catalog = np.load(catalogOutFile)
@@ -88,9 +88,53 @@ class Reducer(object):
         catalog, sex = self._getCatalogs(fitsPath, imageSubtracted)
         catalogTrimmed = self.trimCatalog(catalog, imageOriginal, mask, sex)
         catalogFinal = self.normaliseRadial(catalogTrimmed, sex)
-        np.save(catalogOutFile, catalogFinal)
         self.catalog = catalogFinal
+        
+        if ishape:
+            #Get ishape data now
+            ishapeRes = self.runIshape(fitsPath, catalogFinal, np.ones(catalogFinal.shape) == 1)            
+            catalogFinal = self.addIshapeDetails(catalogFinal, ishapeRes)
+            
+        np.save(catalogOutFile, catalogFinal)
         return catalogFinal
+
+    def addIshapeDetails(self, catalog, parsed):        
+        self._debug("Adding in ishape results")
+        kingFwhm = []
+        chi2Kings = []
+        chi2Deltas = []
+        divs = []
+        subs = []
+        newMask = []
+        for i,row in enumerate(catalog):
+            p = self.getMatch(row, parsed)
+            if p is not None:
+                chi2King = p['KING30'][3]
+                chi2Delta = p['KING30'][4]
+                fwhm = p['KING30'][0]
+                div = chi2Delta/chi2King
+                sub = chi2Delta - chi2King
+                if np.isfinite(chi2King) and np.isfinite(chi2Delta) and np.isfinite(fwhm) and np.isfinite(div) and np.isfinite(sub):    
+                    newMask.append(True)
+                    divs.append(np.round(div, decimals=6))
+                    subs.append(np.round(sub, decimals=6))
+                    chi2Kings.append(np.round(chi2King, decimals=6))
+                    chi2Deltas.append(np.round(chi2Delta, decimals=6))
+                    kingFwhm.append(fwhm)
+                else:
+                    newMask.append(False)
+            else:
+                newMask.append(False)
+        newMask = np.array(newMask)
+        catalogNew = catalog[newMask]
+        catalogNew = append_fields(catalogNew, 'Chi2DeltaKingDiv', divs, usemask=False)    
+        catalogNew = append_fields(catalogNew, 'Chi2DeltaKingSub', subs, usemask=False)    
+        catalogNew = append_fields(catalogNew, 'Chi2King', chi2Kings, usemask=False)    
+        catalogNew = append_fields(catalogNew, 'Chi2Delta', chi2Deltas, usemask=False)    
+        catalogNew = append_fields(catalogNew, 'KingFWHM', kingFwhm, usemask=False)
+        
+        self._debug("\tNew catalog has %d gcs, compared to %d previously" % (newMask.sum(), catalog.shape[0]))
+        return catalogNew
 
     def normaliseRadial(self, catalog, sex):
         
@@ -120,8 +164,8 @@ class Reducer(object):
         catalogFinal = catalog[names].copy()
         #catalogFinal = catalog.copy()
         catalogFinal = append_fields(catalogFinal, 'FALLOFF', result, usemask=False)    
-        catalogFinal = append_fields(catalogFinal, 'CI', ci, usemask=False)    
-        catalogFinal = append_fields(catalogFinal, 'CI2', ci2, usemask=False)    
+        catalogFinal = append_fields(catalogFinal, 'CI', np.round(ci, decimals=6), usemask=False)    
+        catalogFinal = append_fields(catalogFinal, 'CI2', np.round(ci2, decimals=6), usemask=False)    
         
         
         '''if debugPlot:
@@ -172,7 +216,7 @@ class Reducer(object):
         
         fitsFile = fits.open(fitsPath)
         fitsFile[0].data = image
-        fitsFile.writeto(tempFits)
+        fitsFile.writeto(tempFits, clobber=True)
         fitsFile.close()
         
         filters = self.getFilters()
@@ -492,5 +536,91 @@ class Reducer(object):
         return [psfMask1, psfMask2]
                 
         
+    def runIshape(self, fitsPath, catalog, gcsMask):
+        self._debug("Running ishape on given image")
+        tempDir = self.tempDir + os.sep + "ishape"
+        self._debug("\tGenerating temp directory at %s" % tempDir)
+        
+        models = ["KING30"]#, "SERSICx"]
+        indexes = [30.0]#, 2.0]
         
         
+        try:
+            shutil.rmtree(tempDir)  # delete directory
+        except OSError as exc:
+            if exc.errno != errno.ENOENT:
+                raise  # re-raise exception
+        os.mkdir(tempDir)
+        
+    
+        splitMasks = self.splitCatalog(fits.getdata(fitsPath), catalog)
+        psfs = self.getPSFs(fitsPath, catalog)
+    
+        tempCoord = tempDir + os.sep + "coords%d.txt"
+        for i,splt in enumerate(splitMasks):
+            np.savetxt(tempCoord%i, catalog[splt & gcsMask][['X_IMAGE', 'Y_IMAGE']], fmt="%d")        
+    
+        for i,psf in enumerate(psfs):
+            for model,index in zip(models, indexes):
+                argumentFile = tempDir + os.sep + "command.bl"
+                with open(argumentFile, 'w') as f:
+                    f.write("cd %s\nishape %s %s %s LOGMODE=1 SHAPE=%s INDEX=%0.1f FITRAD=7 CALCERR=no\n" % (os.path.abspath(tempDir), os.path.abspath(fitsPath), "coords%d.txt"%i, os.path.abspath(psf), model, index))
+                
+                commandline = 'bl < %s' % argumentFile
+                
+                #commandline = "bl < /Users/shinton/Downloads/bl/test.bl"
+                self._debug("\tExecuting baolab and ishape for psf %s and model %s (%0.1f)" % (psf, model, index))
+                p = subprocess.Popen(["/bin/bash", "-i", "-c", commandline], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+                output = p.communicate() #now wait
+                #print(output[0])
+                #print(output[1])
+        
+        self._debug("\tReading log file")
+        raw = []            
+        with open(tempDir + os.sep + "ishape.log") as log:
+            for line in log:
+                if "@@F" in line or "@@E" in line:
+                    raw.append(line)
+        parsed = {}
+        # @#F <image>       <x> <y>   <psf>      <SHAPE> <FWHM> <RATIO> <PA> <CHISQR> <CHISQR0> <FLUX> <S/N> [INDEX] 
+        # @#E <+/-FWHM> <+/-RATIO> <+/-PA> [+/-INDEX]
+        x = ""
+        y = ""
+        shape = ""
+        for r in raw:
+            sep = r.split()
+            if sep[0] == "@@F" and sep[6] != "OBJ-ERROR" and sep[6] != "FIT-ERROR":
+                x = sep[2]
+                y = sep[3]
+                shape = sep[5]
+                fwhm = float(sep[6])
+                ratio = float(sep[7])
+                pa = float(sep[8])
+                chi2 = float(sep[9])
+                chi2d = float(sep[10])
+                sn = float(sep[12])
+                index = sep[13] if len(sep) >= 14 else ""
+                shape += index
+                key = x + " " + y
+                if parsed.get(key) is None:
+                    parsed[key] = {}
+                parsed[key][shape] = [fwhm, ratio, pa, chi2, chi2d, sn]
+            if sep[0] == "@@E":
+                parsed[key][shape] += [float(sep[1]), float(sep[2]), float(sep[3]), float(sep[4]), float(sep[5]), float(sep[6])]
+        
+        return parsed
+        
+    def getMatch(self, row, parsed):
+        x = row['X_IMAGE']
+        y = row['Y_IMAGE']
+        key = "%d %d" % (x,y)
+        #print(key)
+        if parsed.get(key) is not None:
+            return parsed[key]
+        else:
+            for i in range(-2,3):
+                for j in range(-2,3):
+                    key = "%d %d" % (x+i,y+j)
+                    if parsed.get(key) is not None:
+                        return parsed[key]
+        return None

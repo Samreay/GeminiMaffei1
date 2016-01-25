@@ -47,8 +47,8 @@ class SmartClassifier(object):
             return mcc
     
     def getBestClassifier(self, highPrecision=False):
-        boosts = [1,2,5,10,20,30,40]#60,100]#,40,50,70]
-        weights = [4,8,12,16,32]#,64]#,128]#,12,16,24,32]
+        boosts = [1,2,5,10,20]#,30]#,40]#60,100]#,40,50,70]
+        weights = [4,8,10,12,16]#,64]#,128]#,12,16,24,32]
         classifiers = []
         evals = []
         labels = []
