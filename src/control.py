@@ -12,8 +12,8 @@ mosaicDir = "../resources/mosaic"
 
 classifier = Classifier("../resources/classified/candidates.fits", "../resources/classified/candidates.txt", tempParentDir=tempParentDir, debugPlot=True)
 classifier.getClassifiers()
-'''
 
+'''
 tiles = [Tile(os.path.abspath(tileDir + os.sep + f), classifier, tempParentDir=tempParentDir) for f in os.listdir(tileDir) if os.path.isfile(tileDir + os.sep + f) and f.endswith(".fits")]
 
 gcs = None

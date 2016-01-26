@@ -5,6 +5,12 @@
 __pycache__/
 *.py[cod]
 
+*.aux
+*.bbl
+*.blg
+*.out
+*.synctex.gz
+
 # C extensions
 *.so
 out/

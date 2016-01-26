@@ -413,7 +413,7 @@ Classifier<y:LabelModel>
       <data key="d6">
         <y:GenericNode configuration="com.yworks.flowchart.process">
           <y:Geometry height="40.0" width="80.0" x="184.0" y="663.33251953125"/>
-          <y:Fill color="#E8EEF7" color2="#FF9999" transparent="false"/>
+          <y:Fill color="#E8EEF7" color2="#B7C9E3" transparent="false"/>
           <y:BorderStyle color="#000000" type="line" width="1.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="32.265625" modelName="custom" textColor="#000000" visible="true" width="64.5625" x="7.71875" y="3.8671875">Determine
 PSF<y:LabelModel>
@@ -430,7 +430,7 @@ PSF<y:LabelModel>
       <data key="d6">
         <y:GenericNode configuration="com.yworks.flowchart.process">
           <y:Geometry height="40.0" width="80.0" x="281.5" y="663.33251953125"/>
-          <y:Fill color="#E8EEF7" color2="#FF9999" transparent="false"/>
+          <y:Fill color="#E8EEF7" color2="#B7C9E3" transparent="false"/>
           <y:BorderStyle color="#000000" type="line" width="1.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="18.1328125" modelName="custom" textColor="#000000" visible="true" width="42.244140625" x="18.8779296875" y="10.93359375">iShape<y:LabelModel>
               <y:SmartNodeLabelModel distance="4.0"/>
@@ -559,11 +559,10 @@ Extendeds<y:LabelModel>
       </data>
     </node>
     <node id="n25">
-      <data key="d5"/>
       <data key="d6">
         <y:GenericNode configuration="com.yworks.flowchart.process">
           <y:Geometry height="40.0" width="80.0" x="86.0" y="484.666015625"/>
-          <y:Fill color="#E8EEF7" color2="#FF9999" transparent="false"/>
+          <y:Fill color="#E8EEF7" color2="#B7C9E3" transparent="false"/>
           <y:BorderStyle color="#000000" type="line" width="1.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="32.265625" modelName="custom" textColor="#000000" visible="true" width="49.26953125" x="15.365234375" y="3.8671875">Artifical
 Sources<y:LabelModel>
@@ -577,11 +576,10 @@ Sources<y:LabelModel>
       </data>
     </node>
     <node id="n26">
-      <data key="d5"/>
       <data key="d6">
         <y:GenericNode configuration="com.yworks.flowchart.process">
           <y:Geometry height="40.0" width="80.0" x="86.0" y="598.666015625"/>
-          <y:Fill color="#E8EEF7" color2="#FF9999" transparent="false"/>
+          <y:Fill color="#E8EEF7" color2="#B7C9E3" transparent="false"/>
           <y:BorderStyle color="#000000" type="line" width="1.0"/>
           <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="12" fontStyle="plain" hasBackgroundColor="false" hasLineColor="false" height="32.265625" modelName="custom" textColor="#000000" visible="true" width="57.578125" x="11.2109375" y="3.8671875">Classifier
 Testing<y:LabelModel>
@@ -954,7 +952,6 @@ Testing<y:LabelModel>
       </data>
     </edge>
     <edge id="e29" source="n25" target="n26">
-      <data key="d9"/>
       <data key="d10">
         <y:PolyLineEdge>
           <y:Path sx="0.0" sy="0.0" tx="0.0" ty="0.0"/>
@@ -965,7 +962,6 @@ Testing<y:LabelModel>
       </data>
     </edge>
     <edge id="e30" source="n13" target="n26">
-      <data key="d9"/>
       <data key="d10">
         <y:PolyLineEdge>
           <y:Path sx="0.0" sy="0.0" tx="0.0" ty="0.0"/>

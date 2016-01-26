@@ -47,7 +47,7 @@ class SmartClassifier(object):
             return mcc
     
     def getBestClassifier(self, highPrecision=False):
-        boosts = [1,2,5,10,20]#,30]#,40]#60,100]#,40,50,70]
+        boosts = [1,2,5,10,15,20]#,30]#,40]#60,100]#,40,50,70]
         weights = [4,8,10,12,16]#,64]#,128]#,12,16,24,32]
         classifiers = []
         evals = []
@@ -108,6 +108,9 @@ class SmartClassifier(object):
         self._debug("False negative: %0.1f%%" % (100.0 * fn.sum() / (y==1).sum()))
         self._debug("Point correct: %0.1f%%" % (100.0 * tn.sum() / (y==0).sum()))
         self._debug("False positive: %0.1f%%" % (100.0 * fp.sum() / (y==0).sum()))
+        self._debug("Num True positive / Num Positive: %0.3f" % (1.0 * tp.sum() / (tp.sum() + fp.sum())))
+        self._debug("Num True positive / Num Actual Positive: %0.3f" % (1.0 * tp.sum() / y.sum()))
+        
         
         if self.debugPlot:
             fig = plt.figure(figsize=(8,8))

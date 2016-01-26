@@ -47,7 +47,11 @@ class Tile(Reducer):
         catalog = self.getCatalog(self.fitsPath)
         gcMask = self.classifier.classify(catalog)
         ishapeRes = self.runIshape(self.fitsPath, catalog, gcMask)
-        self.gcsCatalog = self.refineGCMask(catalog, gcMask, ishapeRes)
+        
+        self.catalogFinal = self.addIshapeDetails(catalog[gcMask], ishapeRes)        
+        gcMask2 = self.classifier.classify2(self.catalogFinal)
+        
+        self.gcsCatalog = self.catalogFinal[gcMask2]
         self.gcsCatalog = self.getRAandDec(self.fitsPath, self.gcsCatalog)
         np.save(outFile, self.gcsCatalog)
         return self.gcsCatalog

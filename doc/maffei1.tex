@@ -1,0 +1,306 @@
+\documentclass[useAMS,usenatbib]{mn2e}
+\usepackage{times,graphicx,hyperref}
+\usepackage{amssymb}
+
+%%%%% AUTHORS - PLACE YOUR OWN MACROS HERE %%%%%
+\def\farcs{\hbox{$.\!\!^{\prime\prime}$}}
+\def\farcsh{\hbox{$.\!^{\mathrm{s}}$}}
+\def\mnras{MNRAS}
+\def\nat{Nature}
+\def\aap{A\&A}
+\def\apj{ApJ}
+\def\apjl{ApJ}
+\def\aj{AJ}
+\def\pasj{PASJ}
+\def\pasp{PASP}
+\def\apjs{ApJS}
+\def\aaps{A\&AS}
+\def\aplett{ApL}
+\def\pasa{PASA}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+
+\title[Globular clusters in Maffei 1]{A wide-field study of globular
+  clusters in the nearest giant elliptical: Subaru/Suprime-Cam
+  observations of Maffei 1\thanks{Based on data collected at Subaru
+    Telescope, which is operated by the National Astronomical
+    Observatory of Japan.}}  
+
+\author[S. Hinton et al.]{
+Samuel Hinton$^{1,2}$, 
+Ricardo Salinas$^{3}$% \thanks{E-mail: rsalinas@gemini.edu}, 
+Aaron J. Romanowsky$^{4,5}$, and maybe some others
+\\
+$^1$School of Mathematics and Physics, University of Queensland, QLD 4072, Australia \\
+$^2$Australian Astronomical Observatory, North Ryde, NSW 2113, Australia \\
+$^3$Gemini Observatory\\ 
+$^4$Department of Physics \& Astronomy, San Jos\'e
+  State University, San Jose, CA 95192, USA\\ 
+$^5$University of California Observatories,
+1156 High Street, Santa Cruz,CA 95064, USA
+}
+\begin{document}
+
+\date{Accepted ... Received ...; in original form ...}
+
+
+\pagerange{\pageref{firstpage}--\pageref{lastpage}} \pubyear{2016}
+
+\maketitle
+
+\label{firstpage}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{abstract}
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed condimentum ipsum faucibus sem elementum, eu consectetur risus consectetur. Praesent quis aliquam risus. Vivamus interdum et eros gravida rhoncus. Proin accumsan finibus pellentesque. Praesent et erat eu velit maximus condimentum. Integer ornare vestibulum dolor nec pretium. Suspendisse suscipit, metus sed consectetur pretium, ligula nunc mollis quam, id dapibus est tortor et massa. Maecenas maximus elit orci, sit amet tincidunt libero ultrices a. Nullam sit amet condimentum libero. Duis ullamcorper lorem in nisi gravida tincidunt. Aliquam erat volutpat. Sed vitae sem a elit mattis porttitor.
+\end{abstract}
+
+\begin{keywords}
+Galaxies: individual: Maffei 1 -- Galaxies: star clusters
+\end{keywords}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Introduction}
+\label{sec:intro}
+
+{\bf Add some general remarks on globular cluster systems.}
+ 
+Maffei 1 is a giant elliptical galaxy \citep{maffei68,spinrad71}
+located at only 0.5\degr\,North of the Galactic plane. This position
+implies large obscuration by dust from the Galactic disc which has
+hampered the measurement of even the most basic parameters of the
+galaxy.
+
+{\bf Give main results from the literature}
+
+Its particular relative position has also conspired against the study
+of its globular clusters (GCs). Studies of its globular cluster system
+(GCS) have produced only a handful of GC candidates
+\citep{davidge02,buta03,davidge05}, whereas for its luminosity
+\citep[$M_V\sim-20.80$,][]{fingerhut07}, the size of its GCS should be
+comparable to the one of Cen A, hosting $\sim 1300$ GCs
+\citep{harris10}. 
+
+In this paper we present the first wide-field study of the Maffei 1
+GCS system using Subaru/SuprimeCam imaging.In Sect. \ref{sec:obs} we
+present the imaging data used, as well as its reduction and
+photometry. In Sect. \ref{sec:results} we present the GCs selection,
+together with the derived properties of the
+GCS. Sect. \ref{sec:discussion} puts our results on a wider context,
+while Sect. \ref{sec:conclusions} summarizes the work and give
+conclusions.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Subaru/Suprime-Cam observations and data reduction}
+\label{sec:obs}
+
+Maffei 1 images were obtained using Suprime-Cam \citep{miyazaki02}
+located on the Subaru telescope, Mauna Kea, Hawaii. Suprime-Cam
+comprises 10 CCD detectors separated by $\sim15\arcsec$ covering a
+field-of-view of $34\arcmin\times27\arcmin$ with a pixel scale of
+0.2\arcsec. SDSS $r'$, $i'$ and $z'$-band images were obtained during
+the night of January 5th, 2011.  Several short exposures were taken
+with a $\sim\!  1\arcmin$ dither pattern, totalling 385, 280, and 280
+seconds in the $r'$, $i'$ and $z'$-bands, respectively.
+
+Suprime-Cam images reduction was conducted within the \textsc{sdfred2}
+pipeline \citep{ouchi04}. Reduction steps include bias subtraction,
+flat-fielding, correction for atmospheric distortions, point spread
+function (psf) equalization (i.e. the normalization of the psf to a
+single shape across the detectors and exposures), sky subtraction,
+image alignment and finally, the combination of all exposures and
+detectors into single images. Final averaged images have a
+field-of-view of $\sim37\arcmin\times 31\arcmin$ and a seeing quality
+of 0.72\arcsec, 0.68\arcsec and 0.63\arcsec, for $r'$, $i'$ and $z'$,
+respectively.
+
+For the $z'$ image set, which is used as the basis for the GC
+candidates identification given its higher image quality (see
+Sect. \ref{sec:gc_candidates}), a parallel alternative reduction
+process was adopted. The $z'$ dataset not only provides the reddest
+band to pierce through the Galactic plane, but also contains the best
+seeing images. Even though the same \textsc{sdfred2} pipeline was
+mostly used, a couple of the aforementioned reduction steps were
+skipped in order to mantain image manipulations that could alter the
+image quality to a minimum. Firstly, given the slight degradation of
+the psf towards the outer detectors, psf equalization across the chips
+would imply a lost of information on the best chips. For this reason
+the detectors were reduced independently and not combined into a
+single image as a final step. As a second difference, we did not apply
+any correction for atmospheric distorsions, since it resulted in an
+increase of about 10\% of the measured stellar full width at half
+maximum (fwhm) due to charge shifting to neighbor pixels. Finally,
+images with psf sizes significantly larger than the mean were excluded
+from the final image combination. This resulted in the rejection of
+zero to two exposures per chip.
+
+Coordinate transformations and image combination for the individual
+detectors were carried out with \textsc{daomaster/montage2}
+\citep{stetson93,stetson94}, which give more flexibility than
+\textsc{sdfred2} for images with a small overlapping area. Measured
+fwhm on the combined $z'$ images varies between 0.52\arcsec to
+0.58\arcsec from detector to detector, which are noticeably better
+than the 0.62\arcsec measured on the combined full frame image given
+by \textsc{sdfred2}.
+
+As a last step prior to photometry, images presenting large background
+variations (containing Maffei 1 light or Galactic cirrus), were
+medianed filtered with 128 pixel boxes; a large size that preserves
+point-like sources unaltered. Photometry and astrometry were performed
+on the images fully processed with the \textsc{sdfred2} pipeline.
+
+\begin{figure}
+%\includegraphics[width=0.49\textwidth]{maffei1_fig1.ps}
+\caption{The Maffei 1 field as seen by Subaru-SuprimeCam. Image size
+  is approximately $37\arcmin\times 31\arcmin$. North is up and East is
+  to the left.}
+\label{fig:maffei1}
+\end{figure}
+
+
+\subsection{Stellar(ish) photometry}
+\label{sec:photometry}
+
+Aperture and psf-fitting photometry were carried out using the
+stand-alone \textsc{daophot2} photometric suite \citep{stetson87}. The
+psf was modelled selecting $\sim$120--140\, bright and isolated stars
+on each detector. A quadratically varying Moffat function was found to
+provide the best description of the psf behaviour within the
+detectors.
+
+Photometry for all the sources was also obtained using
+\textsc{SExtractor} \citep{bertin96}, which additionally provides
+measurements of the size, orientation and ellipticity of the sources.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Results}
+\label{sec:results}
+\subsection{Selecting globular clusters candidates}
+\label{sec:gc_candidates}
+
+The basic selection criterium for GCs in Maffei 1 rests on the
+non-stellar shape of their light profiles. This shape, usually smeared
+out for distant systems or in images with low spatial resolution,
+should be noticeable for the largest GCs in Maffei 1 given the
+galaxy's distance and the quality of the imaging. A similar approach
+has been applied succesfully on ground-based imaging of GCs in the
+slightly more distant elliptical galaxy Centaurus A
+\citep{rejkuba01,gomez06,gomez07}.
+
+Star-subtracted $z'$-images produced by the psf-fitting algorithm in
+\textsc{allstar}, were visually inspected to look for residuals that
+revealed the presence of extended sources. The light profile of GCs
+(but also galaxies) would be over-subtracted in the central parts and
+under-subtracted in the wings, leaving an easily recognizable
+``ring-shaped'' residual (see Fig. \ref{fig:subtraction}). A visual
+inspection of the residuals in the entire SuprimeCam field of view is
+painstaking proccess, but it was preferred over more automatized
+procedures such as relying on the star-galaxy separation of
+\textsc{SExtractor} that could result in a large amount of false
+detections; a posterior analysis has shown that clearly resolved
+sources have been assigned a \verb+CLASS_STAR+ parameter value as high
+as 0.98, which on a blind approach would have been classified as
+stars. Our selected approach revealed the presence of XXX extended
+sources in the entire field of view.
+
+The extended sources were separated into 3 classes based on the visual
+appeareance of their residuals in combination with their structural
+parameters measured with \textsc{SExtractor}: circular residuals with
+fwhm $< XX$ (class A), symmetric but elongated residuals where the
+source has $\epsilon< 0.3$ (class B), and finally, elongated residuals
+with $\epsilon > 0.3$ together with sources with very extended (fwhm$
+> 6$ pixels) or asymmetric residuals (class C). In the few cases where
+the source was not detected by SExtractor (usually because of the
+proximity of a bright star or the patchy Maffei 1 center), the
+classification was made only based on their visual appearance. The
+ellipticity limit of 0.3 was chosen since it contains all the
+ellipticities found for GCs in Local Group galaxies
+\citep[e.g.][]{vdb08}. These classes correlate with the likelihood of
+the sources being genuine Maffei 1 GCs based on their structure, with
+the round class-A objects having a higher probability of being genuine
+Maffei 1 GCs, and the elongated or large class-C sources, being most
+probably background galaxies.
+
+\begin{figure}
+%\includegraphics[width=0.49\textwidth]{maffei1_fig2.ps}
+\caption{Two examples of the psf-subtraction technique applied on the
+  final $z$ images to reveal extended sources. The left panels show
+  the original image, while the right panels are the psf-subtracted
+  images. Top panels: A round ``Class A'' object with fwhm=3.4
+  pixels. Note the ring-shaped residual. Bottom panels: A somewhat
+  elongated ``Class B'' object with $\epsilon=0.12$.}
+\label{fig:subtraction}
+\end{figure}
+
+\subsection{Globular clusters color-magnitude diagram}
+\label{sec:gc_cmd}
+
+\subsection{Globular cluster sizes}
+\label{sec:gc_sizes}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Discussion}
+\label{sec:discussion}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Summary and conclusions}
+\label{sec:conclusions}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section*{Acknowledgments}
+
+AJR was supported by National Science Foundation grants AST-0808099
+and AST-0909237.
+
+\bibliographystyle{mn2e}
+\bibliography{maffei1}
+
+\appendix
+\section{Globular cluster candidates photometry}
+\label{sec:appendix}
+\begin{table*}
+ \centering
+ \caption{Photometry of ``Class A'' (see main text for its definition) globular cluster candidates.}
+\label{tab:class_a}  
+\begin{tabular}{@{}lllccccl@{}}
+  \hline
+ID & RA & Dec &$r'$& $i'$& $z'$& $\epsilon$& Notes\\
+GC1 & XX:XX:XX.XX & XX:XX:XX.XX & $99.99 \pm 99.99$ & $99.99 \pm 99.99$ & $99.99 \pm 99.99$ & $ 9.99$& \\
+ \hline
+
+\hline
+\end{tabular}
+\end{table*}
+
+\begin{table*}
+ \centering
+  \caption{Photometry of ``Class B'' globular cluster candidates.}
+\label{tab:class_b}  
+\begin{tabular}{@{}lllccccl@{}}
+  \hline
+ID & RA & Dec &$r'$& $i'$& $z'$& $\epsilon$& Notes\\
+ \hline
+
+\hline
+\end{tabular}
+\end{table*}
+
+\begin{table*}
+ \centering
+  \caption{Photometry of ``Class C'' globular cluster candidates.}
+\label{tab:class_c}  
+\begin{tabular}{@{}lllccccl@{}}
+  \hline
+ID & RA & Dec &$r'$& $i'$& $z'$& $\epsilon$& Notes\\
+ \hline
+
+\hline
+\end{tabular}
+\end{table*}
+
+\bsp
+\label{lastpage}
+
+\end{document}

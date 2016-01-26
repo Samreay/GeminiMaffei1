@@ -10,6 +10,7 @@ from scipy.ndimage.filters import *
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.tree import DecisionTreeClassifier
 from numpy.lib.recfunctions import append_fields
+from sklearn.externals import joblib
 
 from reducer import Reducer
 from smartClassifier import *
@@ -23,11 +24,29 @@ class Classifier(Reducer):
        
         
     def getClassifiers(self):
-        self._setupTempDir()
-        self.catalog = self.getCatalog(self.fitsFile)
-        self.candidateMask = self._getCandidateMask(self.catalog, np.loadtxt(self.candidates))
-        self.classifier,catalog,candidateMask = self._trainClassifier()
-        self.classifier2 = self._trainClassifier2(catalog, candidateMask)
+        
+        class1Save = self.outDir + os.sep + "classifier1.pkl'
+        class2Save = self.outDir + os.sep + "classifier2.pkl'
+        
+        class1Exists = os.path.exists(class1Save)
+        class2Exists = os.path.exists(class2Save)
+        
+        if not (class1Exists and class2Exists):
+            self._setupTempDir()
+            self.catalog = self.getCatalog(self.fitsFile)
+            self.candidateMask = self._getCandidateMask(self.catalog, np.loadtxt(self.candidates))
+        if class1Exists:
+            self.classifier = joblib.load(class1Save)
+        else:
+            self.classifier,catalog,candidateMask = self._trainClassifier()
+            joblib.dump(self.classifier, class1Save) 
+
+        if class2Exists:
+            self.classifier2 = joblib.load(class2Save)
+        else:
+            self.classifier2 = self._trainClassifier2(catalog, candidateMask)
+            joblib.dump(self.classifier2, class2Save) 
+
         #self._testClassifier(catalog, candidateMask)
         #self._cleanTempDir()
         self._debug("Classifier generated. Now you can invoke .clasify(catalog)")
@@ -278,6 +297,12 @@ class Classifier(Reducer):
     def classify(self, catalog, ellipticity=0.25):
         X = catalog.view(np.float64).reshape(catalog.shape + (-1,))[:, 3:]
         z = self.classifier.predict(X) == 1
+        gcs = z & (catalog['ELLIPTICITY'] < ellipticity)
+        return gcs
+        
+    def classify2(self, catalog, ellipticity=0.25):
+        X = catalog.view(np.float64).reshape(catalog.shape + (-1,))[:, 3:]
+        z = self.classifier2.predict(X) == 1
         gcs = z & (catalog['ELLIPTICITY'] < ellipticity)
         return gcs
     
