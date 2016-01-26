@@ -210,41 +210,54 @@ class Reducer(object):
     
         return catalogFinal
         
-    def _getCatalogs(self, fitsPath, image, pixelThreshold=2):
+    def _getCatalogs(self, fitsPath, image, pixelThreshold=2, aperture=False):
         self._debug("Getting objects using sextractor")
         tempFits = os.path.abspath(self.tempDir + os.sep + "temp_%s"%self.name)
         
         fitsFile = fits.open(fitsPath)
-        fitsFile[0].data = image
+        if image is not None:
+            fitsFile[0].data = image
         fitsFile.writeto(tempFits, clobber=True)
         fitsFile.close()
         
         filters = self.getFilters()
-        sex = self.getSextractor()
-        sex.config['FILTER_MASK'] = filters['gauss_4.0_7x7']
+        if aperture:
+            sex = self.getApertureSextractor()
+            sex.config['FILTER_MASK'] = filters['gauss_3.0_7x7']
+        else:
+            sex = self.getSextractor()
+            sex.config['FILTER_MASK'] = filters['gauss_3.0_7x7']
         self._debug("Running sextractor using gaussian filter")
         data1 = sex.run(tempFits, path=sexPath, cwd=self.tempDir)
+        print(data1['catalog'].shape)
         sex.config['FILTER_MASK'] = filters['mexhat_2.5_7x7']
         self._debug("Running sextractor using mexhat filter")
         data2 = sex.run(tempFits, path=sexPath, cwd=self.tempDir)
         
         cat1 = data1['catalog']
         cat2 = data2['catalog']
-        
+
+
+        print(cat2.shape)
         self._debug("Merging catalogs")
         mask = []
-        for entry in cat2:
-            x = entry['X_IMAGE']
-            y = entry['Y_IMAGE']
-            xdiff = cat1['X_IMAGE'] - x
-            xdiff *= xdiff
-            ydiff = cat1['Y_IMAGE'] - y
-            ydiff *= ydiff
-            rdiff = xdiff + ydiff
-            rmin= rdiff.min()
-            mask.append(rmin > pixelThreshold)
-        mask = np.array(mask)
-        catTotal = np.concatenate((cat1, cat2[mask]))
+        print(cat1.size)
+        
+        if cat1.size <= 1:
+            catTotal = cat2
+        else:
+            for entry in cat2:
+                x = entry['X_IMAGE']
+                y = entry['Y_IMAGE']
+                xdiff = cat1['X_IMAGE'] - x
+                xdiff *= xdiff
+                ydiff = cat1['Y_IMAGE'] - y
+                ydiff *= ydiff
+                rdiff = xdiff + ydiff
+                rmin= rdiff.min()
+                mask.append(rmin > pixelThreshold)
+            mask = np.array(mask)
+            catTotal = np.concatenate((cat1, cat2[mask]))
         self._debug("Catalogs merged. Found %d objects." % catTotal.size)
     
         return catTotal, sex
@@ -315,7 +328,7 @@ class Reducer(object):
         sex.config['SATUR_LEVEL'] = 45000
         sex.config['MAG_GAMMA'] = 4.0
         sex.config['MEMORY_OBJSTACK'] = 30000
-        sex.config['MEMORY_PIXSTACK'] = 6000000
+        sex.config['MEMORY_PIXSTACK'] = 9000000
         sex.config['MEMORY_BUFSIZE'] = 16384
         sex.config['DEBLEND_MINCONT'] = 0.001
         
@@ -341,6 +354,16 @@ class Reducer(object):
     
         return sex
     
+    def getApertureSextractor(self, **kwargs):
+        sex = self.getDefaultSextractor()
+        sex.config['PHOT_APERTURES'] = [1]
+        sex.config['PARAMETERS_LIST'] = ['NUMBER','X_IMAGE','Y_IMAGE', 'ELLIPTICITY','MAG_BEST','MAGERR_BEST']
+        sex.config['CHECKIMAGE_TYPE'] = ["NONE"]
+        sex.config['CHECKIMAGE_NAME'] = []
+        for (key, value) in kwargs.iteritems():
+            sex.config[key] = value
+        return sex   
+    
     def getSextractor(self, **kwargs):
         sex = self.getDefaultSextractor()
         sex.config['PHOT_APERTURES'] = [1,2,2.5,3,3.25,3.5,3.75,4,4.25,4.5,5,5.5,6,6.5,7,8,12,14,18,20,25]
@@ -350,7 +373,6 @@ class Reducer(object):
         for (key, value) in kwargs.iteritems():
             sex.config[key] = value
         return sex    
-        
         
         
     def getMaskedImage(self, imageStart):

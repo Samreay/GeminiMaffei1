@@ -25,8 +25,8 @@ class Classifier(Reducer):
         
     def getClassifiers(self):
         
-        class1Save = self.outDir + os.sep + "classifier1.pkl'
-        class2Save = self.outDir + os.sep + "classifier2.pkl'
+        class1Save = self.outDir + os.sep + "classifier1.pkl"
+        class2Save = self.outDir + os.sep + "classifier2.pkl"
         
         class1Exists = os.path.exists(class1Save)
         class2Exists = os.path.exists(class2Save)
