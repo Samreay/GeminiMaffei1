@@ -359,6 +359,8 @@ class Reducer(object):
         sex.config['PHOT_APERTURES'] = [1]
         sex.config['PARAMETERS_LIST'] = ['NUMBER','X_IMAGE','Y_IMAGE', 'ELLIPTICITY','MAG_BEST','MAGERR_BEST']
         sex.config['CHECKIMAGE_TYPE'] = ["NONE"]
+        sex.config['DETECT_THRESH'] = 1.5
+        sex.config['ANALYSIS_THRESH'] = 1.5
         sex.config['CHECKIMAGE_NAME'] = []
         for (key, value) in kwargs.iteritems():
             sex.config[key] = value
@@ -646,3 +648,29 @@ class Reducer(object):
                     if parsed.get(key) is not None:
                         return parsed[key]
         return None
+        
+    def getRAandDec(self, fitsFile, catalog):
+        self._debug("\tRunning xy2sky")
+        tempDir = self.tempDir + os.sep + "xy2sky"
+        self._debug("\tGenerating temp directory at %s" % tempDir)
+        
+        try:
+            shutil.rmtree(tempDir)  # delete directory
+        except OSError as exc:
+            if exc.errno != errno.ENOENT:
+                raise  # re-raise exception
+        os.mkdir(tempDir)
+        
+        imfile = tempDir + os.sep + "imfile.txt"
+        np.savetxt(imfile, catalog[['X_IMAGE','Y_IMAGE']], fmt="%0.3f")
+        outfile = tempDir + os.sep + "skys.txt"
+        # | cut -d \" \" -f 1-2 > %s
+        commandline = wcsToolsPath + "/xy2sky -d %s @%s | awk '{print $1,$2}'> %s" % (fitsFile, imfile, outfile)
+        p = subprocess.Popen(["/bin/bash", "-i", "-c", commandline], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+        output = p.communicate() #now wait
+        
+        res = np.loadtxt(outfile)
+        catalog = append_fields(catalog, 'RA', res[:,0], usemask=False)    
+        catalog = append_fields(catalog, 'DEC', res[:,1], usemask=False)    
+        
+        return catalog

@@ -63,19 +63,20 @@ class Mosaic(Reducer):
     def show(self):
         showInDS9(self.fitsPath, catalog=self.catalog)
                 
-    def getMagnitudes(self, threshold=4):
+    def getMagnitudes(self, threshold=0.0003):
         outFile = self.outDir + os.sep + "cat" + self.subName + ".npy"
         if os.path.exists(outFile):
             cat = np.load(outFile)
         else:
             cat,sex = self._getCatalogs(self.fitsPath, None, aperture=True)
+            cat = self.getRAandDec(self.fitsPath, cat)
             np.save(outFile, cat)
         mag = []
         magE = []
         for entry in self.catalog:
-            x = entry['X_IMAGE']
-            y = entry['Y_IMAGE']
-            dists = np.sqrt((cat['X_IMAGE']-x)*(cat['X_IMAGE']-x) + (cat['Y_IMAGE']-y)*(cat['Y_IMAGE']-y))
+            ra = entry['RA']
+            dec = entry['DEC']
+            dists = np.sqrt((cat['RA']-ra)*(cat['RA']-ra) + (cat['DEC']-dec)*(cat['DEC']-dec))
             minDist = dists.argmin()
             if dists[minDist] < threshold:
                 mag.append(cat[minDist]['MAG_BEST'])

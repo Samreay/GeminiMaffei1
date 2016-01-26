@@ -34,9 +34,13 @@ apGCs = gcs.copy()
 for mosaic in mosaics:
     mosaic.importCatalog(apGCs)
     mags, magEs = mosaic.getMagnitudes()
-    apGCs = append_fields(apGCs, mosaic.subName[mosaic.subName.index("_")+1:]+"_MAG", mags, usemask=False)    
-    apGCs = append_fields(apGCs, mosaic.subName[mosaic.subName.index("_")+1:]+"_MAGE", magEs, usemask=False)    
+    prefix = mosaic.subName[mosaic.subName.index("_")+1:]
+    apGCs = append_fields(apGCs, prefix+"_MAG", mags, usemask=False)    
+    apGCs = append_fields(apGCs, prefix+"_MAGE", magEs, usemask=False)    
+    apGCs = append_fields(apGCs, prefix+"_MASK", ((np.isfinite(apGCs[prefix+'_MAG'])) & (apGCs[prefix+'_MAG'] < 99) & (apGCs[prefix+'_MAGE'] < 20)), dtypes=[np.bool], usemask=False)
+
 
     
-
+# ADD COLOUR DIAGRAMS
+    
 #mosaics[2].show()
