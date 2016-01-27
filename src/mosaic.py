@@ -33,6 +33,7 @@ class Mosaic(Reducer):
         catalog = catalog.copy()
         catalog = self.updatePixelPositions(self.fitsPath, catalog)
         self.catalog = catalog
+                
         
     def updatePixelPositions(self, fitsFile, catalog):
         self._debug("\tRunning xy2sky")
@@ -63,7 +64,7 @@ class Mosaic(Reducer):
     def show(self):
         showInDS9(self.fitsPath, catalog=self.catalog)
                 
-    def getMagnitudes(self, threshold=0.0003):
+    def getMagnitudes(self, threshold=0.0004):
         outFile = self.outDir + os.sep + "cat" + self.subName + ".npy"
         if os.path.exists(outFile):
             cat = np.load(outFile)
@@ -79,11 +80,73 @@ class Mosaic(Reducer):
             dists = np.sqrt((cat['RA']-ra)*(cat['RA']-ra) + (cat['DEC']-dec)*(cat['DEC']-dec))
             minDist = dists.argmin()
             if dists[minDist] < threshold:
+                entry['RA'] = ra
+                entry['DEC'] = dec
                 mag.append(cat[minDist]['MAG_BEST'])
                 magE.append(cat[minDist]['MAGERR_BEST'])
             else:
                 mag.append(np.NaN)
                 magE.append(np.NaN)
         return np.array(mag), np.array(magE)
+        
+    def runPhot(self, fitsFile, cat, apertures=[2,5,8,11]):
+        outfile = self.outDir + os.sep + "outfile2.txt"
+        if os.path.exists(outfile):
+            mags = np.loadtxt(outfile)
+        else:
+            self._debug("\tRunning phot")
+            tempDir = self.tempDir + os.sep + "phot"
+            self._debug("\tGenerating temp directory at %s" % tempDir)
+            
+            try:
+                shutil.rmtree(tempDir)  # delete directory
+            except OSError as exc:
+                if exc.errno != errno.ENOENT:
+                    raise  # re-raise exception
+            os.mkdir(tempDir)
+                    
+            positions = cat[['X_IMAGE', 'Y_IMAGE']]
+            positionFile = tempDir + os.sep + "pos.lst"
+            np.savetxt(positionFile, positions, fmt="%0.3f")
+            
+            env = os.environ.copy()
+            env['PATH'] = ("%s/variants/common/bin:%s/bin:%s/python/bin:" % (urekaPath, urekaPath, urekaPath))+env['PATH']
+            env['PYTHONEXECUTABLE'] = "%s/python/bin/python" % urekaPath
+            # Save script
+            script = '''    cd %s
+        daophot
+        digiphot
+        phot %s %s output=out.mag scale=1 fwhmpsf=3 sigma=3.5 readnoi=10 calgori=centroid cbox=5 salgori=mode annulus=25 dannulus=30  apertures=%s zmag=25 interactive=no verify-
+        txdump out.mag mag yes > outfile.txt
+        .exit''' % (os.path.abspath(tempDir), os.path.abspath(fitsFile), os.path.abspath(positionFile), ",".join(["%d"%i for i in apertures]))
+        
+            scriptFile = tempDir + os.sep + "script.cl"
+            with open(scriptFile, 'w') as f:
+                f.write(script)
+    
+                
+            # Run script
+            self._debug("\tRunning script")
+            p = subprocess.Popen(["/bin/bash", "-i", "-c", "pyraf -x -s < %s && sed 's/INDEF/99/g' outfile.txt > outfile2.txt"%os.path.abspath(scriptFile)], env=env, stderr=subprocess.PIPE, stdout=subprocess.PIPE, cwd=os.path.abspath(tempDir))   
+            output = p.communicate() #now wait
+            self._debug(output[0])
+            self._debug(output[1])
+            mags = np.loadtxt(tempDir + os.sep + "outfile2.txt")
+            np.savetxt(outfile, mags, fmt="%0.6f")
+        
+        char = self.subName[self.subName.find("_")+1:]
+        for i,a in enumerate(apertures):
+            column = "%s_%d"%(char,a)
+            cat = append_fields(cat, column, mags[:,i], usemask=False)
+        return cat
+    
+    def getPhot(self, cat):
+        print(self.subName)
+        self._debug("Running phot to get colours on mosaic %s" % self.subName)
+        cat = self.updatePixelPositions(self.fitsPath, cat)
+        
+        data = self.runPhot(self.fitsPath, cat)
+        
+        return data
                 
                 

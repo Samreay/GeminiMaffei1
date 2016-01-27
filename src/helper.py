@@ -73,16 +73,18 @@ def showInDS9(fitsFile, catalog=None, cols=['X_IMAGE','Y_IMAGE']):
                 
                 
 def plotColourDiagrams(cat):
-    z = cat['Z_MAG']
-    i = cat['I_MAG']
-    r = cat['R_MAG']
+    mag = cat['Z_MAG']
+    z = cat['Z_8']
+    i = cat['I_8']
+    r = cat['R_8']
     
-    zmask = cat['Z_MASK']
-    imask = cat['I_MASK']
-    rmask = cat['R_MASK']
+    zmask = cat['Z_MASK'] & (cat['Z_8'] < 90)
+    imask = cat['Z_MASK'] & (cat['I_8'] < 90)
+    rmask = cat['Z_MASK'] & (cat['R_8'] < 90)
     
     
-    fig, axes = plt.subplots(figsize=(15,5), ncols=3)
+    
+    fig, axes = plt.subplots(figsize=(15,5), ncols=3, sharey=True)
     axes[0].invert_yaxis()
     
     # ELLIPTICITY gives a lot of variation. However max is 0.25, so still in possible GC range
@@ -102,9 +104,9 @@ def plotColourDiagrams(cat):
     vmax = cat[zmask | imask | rmask][colourColumn].max()
     vmax = 3    
     
-    h1 = axes[0].scatter(i[zmask & imask] - z[zmask & imask], z[zmask & imask], c=cat[zmask & imask][colourColumn], vmin=vmin, vmax=vmax, edgecolor="none", cmap=cmap)
-    h2 = axes[1].scatter(r[rmask & imask] - i[rmask & imask], i[rmask & imask], c=cat[rmask & imask][colourColumn], vmin=vmin, vmax=vmax, edgecolor="none", cmap=cmap)
-    h3 = axes[2].scatter(r[zmask & rmask] - z[zmask & rmask], z[zmask & rmask], c=cat[zmask & rmask][colourColumn], vmin=vmin, vmax=vmax, edgecolor="none", cmap=cmap)
+    h1 = axes[0].scatter(i[zmask & imask] - z[zmask & imask], mag[zmask & imask], c=cat[zmask & imask][colourColumn], vmin=vmin, vmax=vmax, edgecolor="none", cmap=cmap)
+    h2 = axes[1].scatter(r[rmask & imask] - i[rmask & imask], mag[rmask & imask], c=cat[rmask & imask][colourColumn], vmin=vmin, vmax=vmax, edgecolor="none", cmap=cmap)
+    h3 = axes[2].scatter(r[zmask & rmask] - z[zmask & rmask], mag[zmask & rmask], c=cat[zmask & rmask][colourColumn], vmin=vmin, vmax=vmax, edgecolor="none", cmap=cmap)
     
     divider = make_axes_locatable(axes[2])
     cax = divider.append_axes("right", size="5%", pad=0.05)
@@ -117,7 +119,7 @@ def plotColourDiagrams(cat):
     axes[2].set_xlabel("$r' - z'$", fontsize=16)
     
     axes[0].set_ylabel("$z'$", fontsize=16)
-    axes[1].set_ylabel("$i'$", fontsize=16)
-    axes[2].set_ylabel("$z'$", fontsize=16)
+    #axes[1].set_ylabel("$i'$", fontsize=16)
+    #axes[2].set_ylabel("$z'$", fontsize=16)
 
     plt.tight_layout()

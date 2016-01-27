@@ -27,11 +27,14 @@ for tile in tiles:
         gcs = np.concatenate((gcs, newGCs))
 
 
-
+'''
 mosaics = [Mosaic(os.path.abspath(mosaicDir + os.sep + f), tempParentDir=tempParentDir) for f in os.listdir(mosaicDir) if f.endswith(".fits")]
-#mosaics = [mosaics[2]]
+mosaicZ = [i for i in mosaics if i.subName.find("_Z") > 0]
+'''
+# This grabs mag best using the z band only (or more than that if I want)
 apGCs = gcs.copy()
-for mosaic in mosaics:
+for mosaic in mosaicZ:
+    print(mosaic.subName)
     mosaic.importCatalog(apGCs)
     mags, magEs = mosaic.getMagnitudes()
     prefix = mosaic.subName[mosaic.subName.index("_")+1:]
@@ -39,9 +42,15 @@ for mosaic in mosaics:
     apGCs = append_fields(apGCs, prefix+"_MAGE", magEs, usemask=False)    
     apGCs = append_fields(apGCs, prefix+"_MASK", ((np.isfinite(apGCs[prefix+'_MAG'])) & (apGCs[prefix+'_MAG'] < 99) & (apGCs[prefix+'_MAGE'] < 20)), dtypes=[np.bool], usemask=False)
 
+print("Done mosaic z")
+
+# From the ra and dec given by the z band, use phot to do photometry
+gc = apGCs.copy()
+for mosaic in mosaics:
+    gc = mosaic.getPhot(gc)
 '''
-    
+
 # ADD COLOUR DIAGRAMS
-plotColourDiagrams(apGCs)    
+plotColourDiagrams(gc)    
     
 #mosaics[2].show()

@@ -359,8 +359,8 @@ class Reducer(object):
         sex.config['PHOT_APERTURES'] = [1]
         sex.config['PARAMETERS_LIST'] = ['NUMBER','X_IMAGE','Y_IMAGE', 'ELLIPTICITY','MAG_BEST','MAGERR_BEST']
         sex.config['CHECKIMAGE_TYPE'] = ["NONE"]
-        sex.config['DETECT_THRESH'] = 1.5
-        sex.config['ANALYSIS_THRESH'] = 1.5
+        sex.config['DETECT_THRESH'] = 2
+        sex.config['ANALYSIS_THRESH'] = 2
         sex.config['CHECKIMAGE_NAME'] = []
         for (key, value) in kwargs.iteritems():
             sex.config[key] = value
