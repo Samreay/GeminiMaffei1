@@ -70,3 +70,54 @@ def showInDS9(fitsFile, catalog=None, cols=['X_IMAGE','Y_IMAGE']):
             if exc.errno != errno.ENOENT:
                 raise  # re-raise exception
                 
+                
+                
+def plotColourDiagrams(cat):
+    z = cat['Z_MAG']
+    i = cat['I_MAG']
+    r = cat['R_MAG']
+    
+    zmask = cat['Z_MASK']
+    imask = cat['I_MASK']
+    rmask = cat['R_MASK']
+    
+    
+    fig, axes = plt.subplots(figsize=(15,5), ncols=3)
+    axes[0].invert_yaxis()
+    
+    # ELLIPTICITY gives a lot of variation. However max is 0.25, so still in possible GC range
+    # FLUX_AUTO shows potential truncation on left hand side of plots
+    # CI shows some outliers, but not as much as ELLIPTICITY
+    # CI2 is much the same
+    # KingFWHM has a few massive outliers that should be removed
+    # Chi2DeltaKingDiv has a small subset which kings are FAR better than delta. Class A candidates maybe. A lot hover around 1.0
+    # FWHM_IMAGE has some very large FWHMs, maybe should remove those as well
+    
+    # FLIP AXIS ON Y BECAUSE HA (i-z, r-i, r-z)
+    # FIND DUST MAP FOR OUR FOV (whether data or webserver)
+    
+    colourColumn = 'Chi2DeltaKingDiv'
+    cmap = 'viridis'
+    vmin = cat[zmask | imask | rmask][colourColumn].min()
+    vmax = cat[zmask | imask | rmask][colourColumn].max()
+    vmax = 3    
+    
+    h1 = axes[0].scatter(i[zmask & imask] - z[zmask & imask], z[zmask & imask], c=cat[zmask & imask][colourColumn], vmin=vmin, vmax=vmax, edgecolor="none", cmap=cmap)
+    h2 = axes[1].scatter(r[rmask & imask] - i[rmask & imask], i[rmask & imask], c=cat[rmask & imask][colourColumn], vmin=vmin, vmax=vmax, edgecolor="none", cmap=cmap)
+    h3 = axes[2].scatter(r[zmask & rmask] - z[zmask & rmask], z[zmask & rmask], c=cat[zmask & rmask][colourColumn], vmin=vmin, vmax=vmax, edgecolor="none", cmap=cmap)
+    
+    divider = make_axes_locatable(axes[2])
+    cax = divider.append_axes("right", size="5%", pad=0.05)
+    #cbaxes = fig.add_axes([0.905, 0.13, 0.01, 0.77])
+    cb = plt.colorbar(h1, cax = cax)  
+    cb.set_label(colourColumn)
+    
+    axes[0].set_xlabel("$i' - z'$", fontsize=16)
+    axes[1].set_xlabel("$r' - i'$", fontsize=16)
+    axes[2].set_xlabel("$r' - z'$", fontsize=16)
+    
+    axes[0].set_ylabel("$z'$", fontsize=16)
+    axes[1].set_ylabel("$i'$", fontsize=16)
+    axes[2].set_ylabel("$z'$", fontsize=16)
+
+    plt.tight_layout()
