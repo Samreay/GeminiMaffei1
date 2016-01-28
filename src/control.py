@@ -55,6 +55,8 @@ for mosaic in mosaics:
 #gcc = dust.correctExtinctions(gc.copy())
 
 # ADD COLOUR DIAGRAMS
-plotColourDiagrams(gcc)    
+colors = ['Chi2DeltaKingDiv', 'ELLIPTICITY', 'CI', 'CI2', 'KingFWHM']
+for c in colors:
+    plotColourDiagrams(gcc, colourColumn=c)    
     
 #mosaics[2].show()

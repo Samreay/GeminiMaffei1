@@ -72,7 +72,7 @@ def showInDS9(fitsFile, catalog=None, cols=['X_IMAGE','Y_IMAGE']):
                 
                 
                 
-def plotColourDiagrams(cat):
+def plotColourDiagrams(cat, colourColumn='Chi2DeltaKingDiv'):
     mag = cat['Z_MAG']
     z = cat['Z_8']
     i = cat['I_8']
@@ -98,11 +98,11 @@ def plotColourDiagrams(cat):
     # FLIP AXIS ON Y BECAUSE HA (i-z, r-i, r-z)
     # FIND DUST MAP FOR OUR FOV (whether data or webserver)
     
-    colourColumn = 'Chi2DeltaKingDiv'
+    
     cmap = 'viridis'
     vmin = cat[zmask | imask | rmask][colourColumn].min()
     vmax = cat[zmask | imask | rmask][colourColumn].max()
-    vmax = 3    
+    #vmax = 3    
     
     h1 = axes[0].scatter(i[zmask & imask] - z[zmask & imask], mag[zmask & imask], c=cat[zmask & imask][colourColumn], vmin=vmin, vmax=vmax, edgecolor="none", cmap=cmap)
     h2 = axes[1].scatter(r[rmask & imask] - i[rmask & imask], mag[rmask & imask], c=cat[rmask & imask][colourColumn], vmin=vmin, vmax=vmax, edgecolor="none", cmap=cmap)
