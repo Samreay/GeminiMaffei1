@@ -4,6 +4,7 @@ from reducer import *
 from tile import *
 from helper import *
 from mosaic import *
+from dust import Dust
 from numpy.lib.recfunctions import append_fields
 
 tempParentDir = "../temp"
@@ -28,8 +29,8 @@ for tile in tiles:
 
 
 '''
-mosaics = [Mosaic(os.path.abspath(mosaicDir + os.sep + f), tempParentDir=tempParentDir) for f in os.listdir(mosaicDir) if f.endswith(".fits")]
-mosaicZ = [i for i in mosaics if i.subName.find("_Z") > 0]
+#mosaics = [Mosaic(os.path.abspath(mosaicDir + os.sep + f), tempParentDir=tempParentDir) for f in os.listdir(mosaicDir) if f.endswith(".fits")]
+#mosaicZ = [i for i in mosaics if i.subName.find("_Z") > 0]
 '''
 # This grabs mag best using the z band only (or more than that if I want)
 apGCs = gcs.copy()
@@ -50,7 +51,10 @@ for mosaic in mosaics:
     gc = mosaic.getPhot(gc)
 '''
 
+#dust = Dust()
+#gcc = dust.correctExtinctions(gc.copy())
+
 # ADD COLOUR DIAGRAMS
-plotColourDiagrams(gc)    
+plotColourDiagrams(gcc)    
     
 #mosaics[2].show()
