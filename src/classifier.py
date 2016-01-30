@@ -25,40 +25,38 @@ class Classifier(Reducer):
         
     def getClassifiers(self):
         
-        class1Save = self.outDir + os.sep + "classifier1.pkl"
-        class2Save = self.outDir + os.sep + "classifier2.pkl"
+        outDir = self.outDir + os.sep + "classPickle"
+        if not os.path.exists(outDir):
+            os.mkdir(outDir)
+        class1Save = outDir + os.sep + "classifier1.pkl"
+        class2Save = outDir + os.sep + "classifier2.pkl"
         
         class1Exists = os.path.exists(class1Save)
         class2Exists = os.path.exists(class2Save)
         
         if not (class1Exists and class2Exists):
             self._setupTempDir()
-            self.catalog = self.getCatalog(self.fitsFile)
-            self.candidateMask = self._getCandidateMask(self.catalog, np.loadtxt(self.candidates))
-        if class1Exists:
-            self.classifier = joblib.load(class1Save)
-        else:
-            self.classifier,catalog,candidateMask = self._trainClassifier()
+            self.mainCatalog = self.getCatalog(self.fitsFile, ishape=True)
+            self.candidateMask = self._getCandidateMask(self.mainCatalog, np.loadtxt(self.candidates))
+            self.mainCatalog = append_fields(self.mainCatalog, 'WEIGHT', self.candidateMask * 1.0, usemask=False)    
+            self.mainCatalog = append_fields(self.mainCatalog, 'EXTENDED', self.candidateMask, usemask=False)    
+            self.mainCatalog = append_fields(self.mainCatalog, 'HLR', np.zeros(self.mainCatalog.shape), usemask=False)    
+            self.mainCatalog = append_fields(self.mainCatalog, 'MAG', np.zeros(self.mainCatalog.shape), usemask=False)
+            self._trainClassifier()
             joblib.dump(self.classifier, class1Save) 
-
-        if class2Exists:
-            self.classifier2 = joblib.load(class2Save)
-        else:
-            self.classifier2 = self._trainClassifier2(catalog, candidateMask)
             joblib.dump(self.classifier2, class2Save) 
+        else:
+            self.classifier = joblib.load(class1Save)
+            self.classifier2 = joblib.load(class2Save)
+            
+        
 
         #self._testClassifier(catalog, candidateMask)
         #self._cleanTempDir()
         self._debug("Classifier generated. Now you can invoke .clasify(catalog)")
 
-    def _getCandidateMask(self, catalog, coord, pixelThreshold=4):
-        self._debug("Loading in extendeds")
-        mask = []
-        for entry in catalog:
-            dists = np.sqrt((entry['X_IMAGE'] - coord[:,0])**2 + (entry['Y_IMAGE'] - coord[:,1])**2 )
-            mask.append(dists.min() < pixelThreshold)
-        mask = np.array(mask)
-        return mask 
+
+        
         
     def _getArtificial(self, i):
         self._debug("Generating artifical populations for training")
@@ -68,10 +66,10 @@ class Classifier(Reducer):
             os.mkdir(tempDir)
         if not os.path.exists(outDir):
             os.mkdir(outDir)
-        psfs = self.getPSFs(self.fitsFile, self.catalog)
+        psfs = self.getPSFs(self.fitsFile, self.mainCatalog)
         image = fits.getdata(self.fitsFile)
         
-        kingPSFs = [self._generateKingPSF(tempDir, outDir, psf) for psf in psfs]
+        kingPSFs = [self._generateKingPSF(tempDir, outDir, psf,i) for psf in psfs]
 
             
         return self._getArtificialImage(i, tempDir, outDir, psfs, kingPSFs, image)
@@ -79,7 +77,7 @@ class Classifier(Reducer):
         
             
                 
-    def _getArtificialImage(self, i, tempDir, outDir, psfs, kingPSFs, image, numExtended=300, numStars=3000):
+    def _getArtificialImage(self, i, tempDir, outDir, psfs, kingPSFs, image, numExtended=100, numStars=600):
         starListFile = outDir + os.sep + "startList%d.txt" % i
         extendedListFile = outDir + os.sep + "extendedList%d.txt" % i
         imageFile = outDir + os.sep + "artificial%d.fits" % i
@@ -102,18 +100,19 @@ class Classifier(Reducer):
         starList = None
         extendedList = None
         finImage = None
+        ext = None
         for kingPSFList, psf, y in zip(kingPSFs, psfs, ys):
             starListX = np.random.uniform(low=0, high=x, size=numStars/len(psfs))
             starListY = np.random.uniform(low=0, high=y, size=numStars/len(psfs))
-            starListMag = np.random.uniform(low=11, high=16, size=numStars/len(psfs))
+            starListMag = np.random.uniform(low=11, high=17, size=numStars/len(psfs))
             starListTemp = np.vstack((starListX, starListY, starListMag)).T
             extendedListX = np.random.uniform(low=0, high=x, size=numExtended/len(psfs))
             extendedListY = np.random.uniform(low=0, high=y, size=numExtended/len(psfs))
-            extendedListMag = np.random.uniform(low=11, high=16, size=numExtended/len(psfs))
+            extendedListMag = np.random.uniform(low=11, high=17, size=numExtended/len(psfs))
             extendedListTemp = np.vstack((extendedListX, extendedListY, extendedListMag)).T
         
-            np.savetxt(starListFileT, starListTemp, fmt="%0.2f")
-            np.savetxt(extendedListFileT, extendedListTemp, fmt="%0.2f")
+            np.savetxt(starListFileT, starListTemp, fmt="%0.3f")
+            np.savetxt(extendedListFileT, extendedListTemp, fmt="%0.3f")
             
             argumentFile = tempDir + os.sep + "command.bl"
             commandline = 'bl < %s' % argumentFile
@@ -123,26 +122,33 @@ class Classifier(Reducer):
             self._debug("\tGenerating stars for artificial image %d"%i)
             p = subprocess.Popen(["/bin/bash", "-i", "-c", commandline], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
             output = p.communicate()
-            print(output[0])
-            print(output[1])
+            self._debug("Adding %d stars"%starListTemp.shape[0])
+            #print(output[0])
+            #print(output[1])
             
             img = fits.getdata(imageFileT)
             #img -= np.median(img)
-            
+            extt = None
             for i,kingPSF in enumerate(kingPSFList):
                 extendedListSpecific = extendedListTemp[i::len(kingPSFList),:]
                 np.savetxt(extendedListFileT, extendedListSpecific, fmt="%0.2f")
 
                 print(kingPSF)
                 with open(argumentFile, 'w') as f:
-                    f.write("cd %s\nmksynth %s %s PSFTYPE=USER PSFFILE=%s REZX=%d REZY=%d ZPOINT=%s BACKGR=0 RDNOISE=0\n" % (os.path.abspath(tempDir), os.path.abspath(extendedListFileT), os.path.abspath(imageFileT), os.path.abspath(kingPSF), x, y, "1000000000"))
+                    f.write("cd %s\nmksynth %s %s PSFTYPE=USER PSFFILE=%s REZX=%d REZY=%d ZPOINT=%s BACKGR=0 RDNOISE=0\n" % (os.path.abspath(tempDir), os.path.abspath(extendedListFileT), os.path.abspath(imageFileT), os.path.abspath(kingPSF[1]), x, y, "1000000000"))
                 self._debug("\tGenerating extendeds for artificial image %d"%i)
                 p = subprocess.Popen(["/bin/bash", "-i", "-c", commandline], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
                 output = p.communicate()
-                print(output[0])
-                print(output[1])
+                #print(output[0])
+                #print(output[1])
                 
                 extendedImage = fits.getdata(imageFileT)
+                self._debug("Adding KING: radius %0.3f, %d stars"%(kingPSF[0], extendedListSpecific.shape[0]))
+                extendedListSpecific = np.hstack((extendedListSpecific, kingPSF[0] * np.ones((extendedListSpecific.shape[0], 1))))
+                if extt is None:
+                    extt = extendedListSpecific
+                else:
+                    extt = np.vstack((extt, extendedListSpecific))
                 #extendedImage -= np.median(extendedImage)
                 img += extendedImage
             #img = extendedImage
@@ -160,9 +166,14 @@ class Classifier(Reducer):
                 finImage = img
             else:
                 finImage = np.vstack((finImage, img))
+            if ext is None:
+                ext = extt
+            else:
+                extt[:,1] += yy
+                ext = np.vstack((ext, extt))
              
-        np.savetxt(starListFile, starList, fmt="%0.2f")
-        np.savetxt(extendedListFile, extendedList, fmt="%0.2f")
+        np.savetxt(starListFile, starList, fmt="%0.3f")
+        np.savetxt(extendedListFile, ext, fmt="%0.3f")
         '''
         fig = plt.figure(figsize=(20,7))
         ax0 = fig.add_subplot(1,1,1)
@@ -172,158 +183,133 @@ class Classifier(Reducer):
         fits.writeto(imageFile, finImage)
         
         
-        return (starList, extendedList, finImage)
+        return (starList, ext, finImage)
     
     
     
-    def _generateKingPSF(self, tempDir, outDir, psf, numKings=20, minFWHM=1.3, std=0.5):
-        np.random.seed(111)
-        vals = np.abs(np.random.normal(scale=std, size=(numKings))) + minFWHM
+    def _generateKingPSF(self, tempDir, outDir, psf, i, numKings=10, minFWHM=1, meanFWHM=5, std=2):
+        np.random.seed(111+i)
+        parsecs = np.abs(np.random.normal(loc=meanFWHM, scale=std, size=(numKings)))
+        #print(parsecs)
+        parsecs[parsecs < minFWHM] += meanFWHM
+        as2Rad = np.pi / (180 * 60 * 60)
+        pixels = (0.2 / np.tan(2.7e6 * as2Rad)) * parsecs
         kings = []
-        for i,val in enumerate(vals):        
-            kingPSF = outDir + os.sep + "king_%d_"%i + os.path.basename(psf)
+        for i,pixel in enumerate(pixels):        
+            kingPSF = outDir + os.sep + "king_%d_%0.3f_"%(i,parsecs[i]) + os.path.basename(psf)
             if not self.redo and os.path.exists(kingPSF):
-                kings.append(kingPSF)
+                kings.append((parsecs[i], kingPSF))
                 continue
             argumentFile = tempDir + os.sep + "command.bl"
             with open(argumentFile, 'w') as f:
-                f.write("cd %s\nmkcmppsf %s PSFFILE=%s OBJTYPE=KINGx RADIUS=17 INDEX=30 FWHMOBJX=%0.2f FWHMOBJY=%0.2f \n" % (tempDir, os.path.abspath(kingPSF), os.path.abspath(psf), val, val))
+                f.write("cd %s\nmkcmppsf %s PSFFILE=%s OBJTYPE=KINGx RADIUS=17 INDEX=30 FWHMOBJX=%0.3f FWHMOBJY=%0.3f \n" % (tempDir, os.path.abspath(kingPSF), os.path.abspath(psf), pixel, pixel))
             
             commandline = 'bl < %s' % argumentFile
             
             #commandline = "bl < /Users/shinton/Downloads/bl/test.bl"
-            self._debug("\tExecuting baolab and mkcmppsf for psf %s" % (os.path.abspath(psf)))
+            self._debug("\tGenerating KingPSF %0.3f pizels: mkcmppsf for psf %s" % (pixel, os.path.abspath(psf)))
             p = subprocess.Popen(["/bin/bash", "-i", "-c", commandline], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
             output = p.communicate() #now wait
             #print(output[0])
             #print(output[1])
-            kings.append(kingPSF)
+            kings.append((parsecs[i], kingPSF))
         return kings
 
+    def getCatAndCandFromImage(self, tempDir, index, ishape=True):
+        fitsFile = tempDir + os.sep + "artificalAdded%d.fits"%index
+        stars, extendeds, image = self._getArtificial(index)
+        hdulist = fits.open(self.fitsFile)
+        hdulist[0].data += image
+        hdulist.writeto(fitsFile, clobber=True)
+        hdulist.close()
+        catalogTemp = self.getCatalog(fitsFile, ishape=ishape, excluded=self.mainCatalog)
+        hlr = []
+        mags = []
+        ext = []
+        for i,row in enumerate(catalogTemp):
+            x = row['X_IMAGE']
+            y = row['Y_IMAGE']
+            dists = np.sqrt((x-extendeds[:,0])*(x-extendeds[:,0]) + (y-extendeds[:,1])*(y-extendeds[:,1]))
+            minDist = dists.argmin()
+            if dists[minDist] < 4:
+                hlr.append(extendeds[minDist, 3])
+                mags.append(extendeds[minDist, 2])
+                ext.append(True)
+            else:
+                hlr.append(0)
+                mags.append(0)
+                ext.append(False)
+        catalogTemp = append_fields(catalogTemp, 'WEIGHT', np.zeros(catalogTemp.shape), usemask=False)    
+        catalogTemp = append_fields(catalogTemp, 'EXTENDED', np.array(ext), usemask=False)    
+        catalogTemp = append_fields(catalogTemp, 'HLR', np.array(hlr), usemask=False)    
+        catalogTemp = append_fields(catalogTemp, 'MAG', np.array(mags), usemask=False)
+        return catalogTemp, extendeds
         
-    def _getTrainingData(self, numImages=5):
+    def _getTrainingData(self, numImages=200, ishape=True):
         tempDir = self.tempDir + os.sep + "data"
+        outFile1 = self.outDir + os.sep + "allData1_%d.npy"%numImages
+        outFile2 = self.outDir + os.sep + "allData2_%d.npy"%numImages
+        if os.path.exists(outFile1) and os.path.exists(outFile2):
+            self._debug("Loading existing catalogs")
+            return np.load(outFile1), np.load(outFile2)
+            
         if not os.path.exists(tempDir):
             os.mkdir(tempDir)
         
-        baseImage = fits.getdata(self.fitsFile)
-        catalog = None
-        candidateMask = None
-        cand = np.loadtxt(self.candidates)
+        catalog = self.mainCatalog.copy()
+        exts = None
         for i in range(numImages):
-            fitsFile = tempDir + os.sep + "artificalAdded%d.fits"%i
-            stars, extendeds, image = self._getArtificial(i)
-            hdulist = fits.open(self.fitsFile)
-            hdulist[0].data = baseImage + image
-            #hdulist[0].data = image
-            hdulist.writeto(fitsFile, clobber=True)
-            hdulist.close()
-            catalogTemp = self.getCatalog(fitsFile)
-            if catalog is None:
-                catalog = catalogTemp
+            cat, ext = self.getCatAndCandFromImage(tempDir, i, ishape=ishape)
+            catalog = np.concatenate((catalog, cat))
+            if exts is None:
+                exts = ext
             else:
-                catalog = np.concatenate((catalog, catalogTemp))
-                
-            extendeds = np.vstack((extendeds[:,:-1], cand))
-            #extendeds = extendeds[:,:-1]
-            candidateMaskTemp = self._getCandidateMask(catalogTemp, extendeds)
-            if candidateMask is None:
-                candidateMask = candidateMaskTemp
-            else:
-                candidateMask = np.concatenate((candidateMask, candidateMaskTemp))
-            
-        return catalog, candidateMask
+                exts = np.vstack((exts, ext))
+        self._debug("Saving catalog to %s"%outFile1)
+        np.save(outFile1, catalog)
+        np.save(outFile2, exts)
+        return catalog, exts
         
-    def _getTrainingData2(self, numImages=3):
-        tempDir = self.tempDir + os.sep + "data"
-        if not os.path.exists(tempDir):
-            os.mkdir(tempDir)
-        
-        baseImage = fits.getdata(self.fitsFile)
-        catalog = None
-        candidateMask = None
-        cand = np.loadtxt(self.candidates)
-        for i in range(numImages):
-            fitsFile = tempDir + os.sep + "artificalAdded%d.fits"%i
-            stars, extendeds, image = self._getArtificial(i)
-            hdulist = fits.open(self.fitsFile)
-            hdulist[0].data = baseImage + image
-            #hdulist[0].data = image
-            hdulist.writeto(fitsFile, clobber=True)
-            hdulist.close()
-            catalogTemp = self.getCatalog(fitsFile, ishape=True)
-            
-            
-
-            if catalog is None:
-                catalog = catalogTemp
-            else:
-                catalog = np.concatenate((catalog, catalogTemp))
-                
-            extendeds = np.vstack((extendeds[:,:-1], cand))
-            #extendeds = extendeds[:,:-1]
-            candidateMaskTemp = self._getCandidateMask(catalogTemp, extendeds)
-            if candidateMask is None:
-                candidateMask = candidateMaskTemp
-            else:
-                candidateMask = np.concatenate((candidateMask, candidateMaskTemp))
-                
-        return catalog, candidateMask
-                
     
         
-    def _trainClassifier(self):
+    def _trainClassifier(self, ishape=True):
         
-        catalog, candidateMask = self._getTrainingData(numImages=5)
+        catalog, extendeds = self._getTrainingData(numImages=200, ishape=ishape)
         self.catalog1 = catalog
-        self.mask1 = candidateMask
-        self._debug("Have data for %d extendeds out of %d objects (%0.2f%%)" % (candidateMask.sum(), candidateMask.size, 100.0*candidateMask.sum()/candidateMask.size))
-        y = candidateMask * 1
-        X = catalog.view(np.float64).reshape(catalog.shape + (-1,))[:, 3:]
+        self._debug("Have data for %d extendeds out of %d objects (%0.2f%%)" % (catalog['EXTENDED'].sum(), catalog.shape[0], 100.0*catalog['EXTENDED'].sum()/catalog.shape[0]))
+        y = 'EXTENDED'
         
         
         self._debug("Creating classifier")
 
         # Create and fit an AdaBoosted decision tree
-        self.sc = SmartClassifier(X,y)
-        bdt = self.sc.learn()
+        self.sc = SmartClassifier(catalog,y,extendeds,remove=['NUMBER','X_IMAGE','Y_IMAGE','WEIGHT','HLR','MAG','Chi2DeltaKingDiv','Chi2DeltaKingSub','Chi2King','Chi2Delta','KingFWHM'])
+        self.classifier = self.sc.learn()
         #bdt = AdaBoostClassifier(DecisionTreeClassifier(max_depth=2), algorithm="SAMME", n_estimators=strength)
         #bdt.fit(X, y, sample_weight=1+40*y)
         self._debug("Classifier created")
-        bdt.label = "Boosted Decision Tree"
-        return bdt,catalog, candidateMask
+        self.classifier.label = "Boosted Decision Tree"
+        
+        
+        self.sc2 = SmartClassifier(catalog,y,extendeds,remove=['NUMBER','X_IMAGE','Y_IMAGE','WEIGHT','HLR','MAG'])
+        self.classifier2 = self.sc2.learn()
+        #bdt = AdaBoostClassifier(DecisionTreeClassifier(max_depth=2), algorithm="SAMME", n_estimators=strength)
+        #bdt.fit(X, y, sample_weight=1+40*y)
+        self._debug("Classifier2 created")
+        self.classifier2.label = "Boosted Decision Tree"
+        
+        #raise Exception('ha')
+        
     
     
     def classify(self, catalog, ellipticity=0.25):
-        X = catalog.view(np.float64).reshape(catalog.shape + (-1,))[:, 3:]
-        z = self.classifier.predict(X) == 1
+        z = self.sc.classify(catalog) == 1
         gcs = z & (catalog['ELLIPTICITY'] < ellipticity)
         return gcs
         
     def classify2(self, catalog, ellipticity=0.25):
-        X = catalog.view(np.float64).reshape(catalog.shape + (-1,))[:, 3:]
-        z = self.classifier2.predict(X) == 1
+        z = self.sc2.classify(catalog) == 1
         gcs = z & (catalog['ELLIPTICITY'] < ellipticity)
         return gcs
     
-    def _trainClassifier2(self, catalog, catalogMask):
-        catalog, candidateMask = self._getTrainingData2(numImages=5)
-        self.catalog2 = catalog
-        self.mask2 = candidateMask
-        self._debug("Have data for %d extendeds out of %d objects (%0.2f%%)" % (candidateMask.sum(), candidateMask.size, 100.0*candidateMask.sum()/candidateMask.size))
-        y = candidateMask * 1
-        X = catalog.view(np.float64).reshape(catalog.shape + (-1,))[:, 3:]
-        
-        
-        self._debug("Creating classifier")
-
-        # Create and fit an AdaBoosted decision tree
-        self.sc2 = SmartClassifier(X,y)
-        bdt2 = self.sc2.learn()
-        #bdt = AdaBoostClassifier(DecisionTreeClassifier(max_depth=2), algorithm="SAMME", n_estimators=strength)
-        #bdt.fit(X, y, sample_weight=1+40*y)
-        self._debug("Classifier created")
-        bdt2.label = "Boosted Decision Tree"
-        return bdt2
-
         

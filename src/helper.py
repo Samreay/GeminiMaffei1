@@ -33,17 +33,17 @@ def showInDS9(fitsFile, catalog=None, cols=['X_IMAGE','Y_IMAGE']):
         tempDir = tempfile.mkdtemp()
         print("Generating temp directory at %s" % tempDir)
         
-        shutil.copy(fitsFile, tempDir + os.sep + "temp.fits")
+        #shutil.copy(fitsFile, tempDir + os.sep + "temp.fits")
         commandline = "ds9 "
-        commandline += " %s "%fitsFile
+        commandline += " %s "%os.path.abspath(fitsFile)
         median = np.median(fits.getdata(fitsFile))
-        commandline += " -scale limits %d %d" % (median, median + 50)
+        commandline += " -scale limits %d %d" % (median - 100, median + 300)
         colours = ["red", "green", "cyan"]
         if catalog is not None:
             cat = "catalog.txt"
             catFile = tempDir + os.sep + cat
             np.savetxt(catFile, catalog[cols], fmt="%0.5f")
-            commandline += " -catalog import tsv %s -catalog psky image -catalog symbol shape circle -catalog symbol size 10 -catalog symbol size2 10 -catalog symbol color %s -catalog update " % (catFile, colours[0])
+            commandline += " -catalog import tsv %s %s -catalog symbol shape circle -catalog symbol size 15 -catalog symbol size2 15 -catalog symbol color %s -catalog update " % (catFile, ("-catalog psky fk5 -catalog psystem wcs" if cols[0]=="RA" else "-catalog psky image"), colours[0])
         
         f = "toRun.sh"
         filename = tempDir + os.sep + f
@@ -70,7 +70,39 @@ def showInDS9(fitsFile, catalog=None, cols=['X_IMAGE','Y_IMAGE']):
             if exc.errno != errno.ENOENT:
                 raise  # re-raise exception
                 
-                
+def addColourDiff(catalog):
+    cat = catalog.copy()
+    apertures = [int(n[n.find("_")+1:]) for n in cat.dtype.names if n.find("R_") != -1]
+    
+    for ap in apertures:
+        z = "Z_%d"%ap
+        r = "R_%d"%ap
+        diff = cat[r] - cat[z]
+        cat = append_fields(cat, 'RMZ_%d'%ap, diff, usemask=False)    
+    return cat
+    
+def plotColourDifference(cat, number=20, threshold=3):
+    
+    fig, ax0 = plt.subplots(figsize=(7,5), ncols=1, sharey=True)
+    ax0.invert_yaxis()
+    
+    cols = [n for n in cat.dtype.names if n.find("RMZ_") != -1]
+    entries = cat[cols].view(np.float64).reshape(cat.shape + (-1,))
+    aps = np.array([int(n[n.find("_")+1:]) for n in cols])
+    gcMask = []
+    for i,row in enumerate(entries):
+        mask = np.isfinite(row) & (row < 30)
+        red = row[mask]
+        if red.size > 0:
+            gcMask.append(red.max() - red.min() < threshold)
+        else:
+            gcMask.append(False)
+        if i < number:
+            ax0.plot(aps[mask], row[mask])
+    ax0.set_xlabel("Aparture size (px)")
+    ax0.set_ylabel("$r' - z'$", fontsize=16)
+    return cat[np.array(gcMask)]
+        
                 
 def plotColourDiagrams(cat, colourColumn='Chi2DeltaKingDiv'):
     mag = cat['Z_MAG']

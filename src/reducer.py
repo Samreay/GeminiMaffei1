@@ -66,7 +66,7 @@ class Reducer(object):
         self.tempDirSetup = True
         self._debug("Generating temp directory at %s for classifier" % self.tempDir)
 
-    def getCatalog(self, fitsPath, ishape=False):   
+    def getCatalog(self, fitsPath, ishape=False, excluded=None):
         self.name = os.path.splitext(os.path.basename(fitsPath))[0]
         catalogOutFile = self.outDir + os.sep + self.name + ("_ishape_" if ishape else "") + "Cat.npy"
         if not self.redo and os.path.exists(catalogOutFile):
@@ -86,6 +86,10 @@ class Reducer(object):
         mask, imageMasked = self.getMaskedImage(imageOriginal)
         imageSubtracted = self.getBackground(imageMasked)
         catalog, sex = self._getCatalogs(fitsPath, imageSubtracted)
+        if excluded is not None:
+            self._debug("Removing %d excluded sources. Had %d sources."%(excluded.shape[0],catalog.shape[0]))
+            catalog = catalog[~self._getCandidateMask(catalog, excluded[['X_IMAGE','Y_IMAGE']].view(np.float64).reshape(excluded.shape + (-1,)))]
+            self._debug("Went to %d sources"%catalog.shape[0])
         catalogTrimmed = self.trimCatalog(catalog, imageOriginal, mask, sex)
         catalogFinal = self.normaliseRadial(catalogTrimmed, sex)
         self.catalog = catalogFinal
@@ -97,7 +101,15 @@ class Reducer(object):
             
         np.save(catalogOutFile, catalogFinal)
         return catalogFinal
-
+        
+    def _getCandidateMask(self, catalog, coord, pixelThreshold=4):
+        self._debug("Loading in extendeds")
+        mask = []
+        for entry in catalog:
+            dists = np.sqrt((entry['X_IMAGE'] - coord[:,0])**2 + (entry['Y_IMAGE'] - coord[:,1])**2 )
+            mask.append(dists.min() < pixelThreshold)
+        mask = np.array(mask)
+        return mask
     def addIshapeDetails(self, catalog, parsed):        
         self._debug("Adding in ishape results")
         kingFwhm = []

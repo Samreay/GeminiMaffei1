@@ -10,12 +10,13 @@ from numpy.lib.recfunctions import append_fields
 tempParentDir = "../temp"
 tileDir = "../resources/tiles"
 mosaicDir = "../resources/mosaic"
+view = r"/Users/shinton/Documents/backup/GeminiMaffei1/resources/mosaicZSub.fits"
 
-'''
+
 classifier = Classifier("../resources/classified/candidates.fits", "../resources/classified/candidates.txt", tempParentDir=tempParentDir, debugPlot=True)
 classifier.getClassifiers()
 
-
+'''
 tiles = [Tile(os.path.abspath(tileDir + os.sep + f), classifier, tempParentDir=tempParentDir) for f in os.listdir(tileDir) if os.path.isfile(tileDir + os.sep + f) and f.endswith(".fits")]
 
 gcs = None
@@ -28,10 +29,10 @@ for tile in tiles:
         gcs = np.concatenate((gcs, newGCs))
 
 
-'''
-#mosaics = [Mosaic(os.path.abspath(mosaicDir + os.sep + f), tempParentDir=tempParentDir) for f in os.listdir(mosaicDir) if f.endswith(".fits")]
-#mosaicZ = [i for i in mosaics if i.subName.find("_Z") > 0]
-'''
+
+mosaics = [Mosaic(os.path.abspath(mosaicDir + os.sep + f), tempParentDir=tempParentDir) for f in os.listdir(mosaicDir) if f.endswith(".fits")]
+mosaicZ = [i for i in mosaics if i.subName.find("_Z") > 0]
+
 # This grabs mag best using the z band only (or more than that if I want)
 apGCs = gcs.copy()
 for mosaic in mosaicZ:
@@ -49,14 +50,19 @@ print("Done mosaic z")
 gc = apGCs.copy()
 for mosaic in mosaics:
     gc = mosaic.getPhot(gc)
-'''
 
-#dust = Dust()
-#gcc = dust.correctExtinctions(gc.copy())
 
-# ADD COLOUR DIAGRAMS
-colors = ['Chi2DeltaKingDiv', 'ELLIPTICITY', 'CI', 'CI2', 'KingFWHM']
+dust = Dust()
+gcc = dust.correctExtinctions(gc.copy())
+gccd = addColourDiff(gcc)
+
+gccf = plotColourDifference(gccd)
+gccf = gccf[gccf['KingFWHM'] < 15]
+
+
+colors = ['Chi2DeltaKingDiv']#, 'ELLIPTICITY', 'CI', 'CI2', 'KingFWHM']
 for c in colors:
-    plotColourDiagrams(gcc, colourColumn=c)    
+    plotColourDiagrams(gccf, colourColumn=c)    
     
-#mosaics[2].show()
+    
+'''
