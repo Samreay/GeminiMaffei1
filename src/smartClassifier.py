@@ -9,8 +9,9 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 class SmartClassifier(object):
     """ Actually still extremely dumb """
-    def __init__(self, catalog, y, other, remove=[],train=0.4, test=0.35, validate=0.25, debug=True, debugPlot=True):
+    def __init__(self, name, catalog, y, other, remove=[],train=0.4, test=0.35, validate=0.25, debug=True, debugPlot=True):
         self.catalog = catalog.copy()
+        self.name = name
         remove.append(y)
         self.remove = remove
         np.random.shuffle(self.catalog)
@@ -75,8 +76,9 @@ class SmartClassifier(object):
         return x,y,w
         
     def getBestClassifier(self, highPrecision=False):
-        boosts = [1,2,5,10,15,20]#,30]#,40]#60,100]#,40,50,70]
+        boosts = [1,2,5,10]#,15,20]#,30]#,40]#60,100]#,40,50,70]
         weights = [1,2,3,4]#,6,8]#,8,10,12,16]#,64]#,128]#,12,16,24,32]
+        maxDepth = 3
         classifiers = []
         evals = []
         labels = []
@@ -94,11 +96,11 @@ class SmartClassifier(object):
         
         
         for boost in boosts:
-            for i in range(1,4):
+            for i in range(1,maxDepth+1):
                 for w in weights:
                     x,y,weight = self.getXYW(train)
-                    sw = np.min(np.vstack((train['HLR']/6.0, np.ones(train.shape))), axis=0)
-                    weight = 1.0*(1-y)+(w-1)*y*sw + 20.0*weight
+                    sw = np.min(np.vstack((train['HLR']/6.0, np.ones(train.shape))), axis=0)**2
+                    weight = 1.0*(1-y)+(w-1)*y*sw + 100.0*weight
                     classifier = AdaBoostClassifier(DecisionTreeClassifier(max_depth=i), algorithm="SAMME", n_estimators=boost)
                     classifiers.append(classifier)
                     classifier.fit(x,y, sample_weight=weight)
@@ -135,7 +137,7 @@ class SmartClassifier(object):
         minHLR = max(extendedHLRs.min(),1)
         maxHLR = min(extendedHLRs.max(),10)
         print(minMag, maxMag, minHLR, maxHLR)
-        res = 6
+        res = 8
         hlrs = np.linspace(minHLR, maxHLR, res)
         mags = np.linspace(minMag, maxMag, res)
         hTotal, xedg, yedg = np.histogram2d(extendedHLRs, extendedMags, bins=[hlrs, mags])
@@ -151,20 +153,27 @@ class SmartClassifier(object):
         foundMags = np.array(foundMags)
         hFound, xedg, yedg = np.histogram2d(foundHLRs, foundMags, bins=[hlrs, mags])
         hRatio = hFound / (hTotal * self.test)
+        self.hRatio = hRatio
+        self.hlrs = 0.5*(xedg[1:]+xedg[:-1])
+        self.mags = 0.5*(yedg[1:]+yedg[:-1])
         if self.debugPlot:
-            fig = plt.figure(figsize=(8,8))
+            fig = plt.figure(figsize=(6,6))
             ax0 = fig.add_subplot(1,1,1)
             ax0.invert_yaxis()
-            h1 = ax0.imshow(hRatio.T, vmax=1, vmin=0,cmap='viridis', interpolation='none', extent=[minHLR, maxHLR, maxMag, minMag], aspect=(maxHLR-minHLR)/(maxMag-minMag))
+            plt.tight_layout()
+            h1 = ax0.imshow(hRatio.T, vmax=1, vmin=0,cmap='viridis', interpolation='nearest', extent=[minHLR, maxHLR, maxMag, minMag],aspect=(maxHLR-minHLR)/(maxMag-minMag))
 
             #ax0.plot(extendedHLRs, extendedMags, 'bo')
             #ax0.plot(foundHLRs, foundMags, 'y.')
-            ax0.set_xlabel("$r_h$ (pc)", fontsize=16)
-            ax0.set_ylabel("Apparent magnitude")
-            divider = make_axes_locatable(ax0)
-            cax = divider.append_axes("right", size="5%", pad=0.05)
-            cb = plt.colorbar(h1, cax = cax)  
-            cb.set_label("Probability")
+            ax0.set_xlabel(r"$r_h\ \rm{(pc)}$", fontsize=18)
+            ax0.set_ylabel(r"$\rm{Apparent}\ \rm{magnitude}$", fontsize=18)
+            #divider = make_axes_locatable(ax0)
+            #cax = divider.append_axes("right", size="5%", pad=0.05)
+            #cb = plt.colorbar(h1, cax = cax)
+            cb = plt.colorbar(h1,fraction=0.046, pad=0.03)
+            cb.set_label(r"$\rm{Probability}$", fontsize=18)
+            fig.savefig("classifier_%s.pdf"%self.name, bbox_inches="tight")
+            np.save("classifier_%s.npy"%self.name, hRatio)
             
         
         

@@ -81,24 +81,56 @@ def addColourDiff(catalog):
         cat = append_fields(cat, 'RMZ_%d'%ap, diff, usemask=False)    
     return cat
     
-def plotColourDifference(cat, number=20, threshold=3):
+def plotColourDifference(cat, psfs, number=20, threshold=3):
     
-    fig, ax0 = plt.subplots(figsize=(7,5), ncols=1, sharey=True)
-    ax0.invert_yaxis()
+
     
     cols = [n for n in cat.dtype.names if n.find("RMZ_") != -1]
     entries = cat[cols].view(np.float64).reshape(cat.shape + (-1,))
+    entries2 = psfs[cols].view(np.float64).reshape(psfs.shape + (-1,))
     aps = np.array([int(n[n.find("_")+1:]) for n in cols])
+    
+    adj2 = entries2 - np.min(entries2, axis=1)[np.newaxis].T
+    medians2 = np.median(adj2, axis=0)
+    
+    adj = entries - np.min(entries, axis=1)[np.newaxis].T
+    
+    dev = np.max(adj2, axis=1)
+    minDev = np.median(dev)
+    print(minDev)
+    medians = np.median(adj, axis=0)
+    
+    
+    fig, ax0 = plt.subplots(figsize=(7,5), ncols=1, sharey=True)
+    ax0.invert_yaxis()
+    ax0.plot(aps, medians, 'b', label="Median GC candidate")
+    ax0.plot(aps, medians2, 'r', label="Median star candidate")
+    ax0.legend(loc=4)
+    ax0.set_xlabel("Aparture size (px)")
+    ax0.set_ylabel("$r' - z'$", fontsize=16)
+    
+    fig, ax0 = plt.subplots(figsize=(7,5), ncols=1, sharey=True)
+    ax0.invert_yaxis()
+    for i,row in enumerate(entries2):
+        mask = np.isfinite(row) & (row < 30) & (row > -10)
+        red = row[mask]
+        if i < number:
+            ax0.plot(aps[mask], row[mask], 'r', alpha=0.3)    
+    
+    
     gcMask = []
     for i,row in enumerate(entries):
         mask = np.isfinite(row) & (row < 30)
         red = row[mask]
         if red.size > 0:
-            gcMask.append(red.max() - red.min() < threshold)
+            gcMask.append(red.max() - red.min() < 5 * minDev)
         else:
             gcMask.append(False)
         if i < number:
-            ax0.plot(aps[mask], row[mask])
+            ax0.plot(aps[mask], row[mask], 'b', alpha=0.2)
+
+            
+            
     ax0.set_xlabel("Aparture size (px)")
     ax0.set_ylabel("$r' - z'$", fontsize=16)
     return cat[np.array(gcMask)]
@@ -134,7 +166,7 @@ def plotColourDiagrams(cat, colourColumn='Chi2DeltaKingDiv'):
     cmap = 'viridis'
     vmin = cat[zmask | imask | rmask][colourColumn].min()
     vmax = cat[zmask | imask | rmask][colourColumn].max()
-    #vmax = 3    
+    vmax = 3    
     
     h1 = axes[0].scatter(i[zmask & imask] - z[zmask & imask], mag[zmask & imask], c=cat[zmask & imask][colourColumn], vmin=vmin, vmax=vmax, edgecolor="none", cmap=cmap)
     h2 = axes[1].scatter(r[rmask & imask] - i[rmask & imask], mag[rmask & imask], c=cat[rmask & imask][colourColumn], vmin=vmin, vmax=vmax, edgecolor="none", cmap=cmap)

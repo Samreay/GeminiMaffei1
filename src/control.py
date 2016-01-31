@@ -12,21 +12,34 @@ tileDir = "../resources/tiles"
 mosaicDir = "../resources/mosaic"
 view = r"/Users/shinton/Documents/backup/GeminiMaffei1/resources/mosaicZSub.fits"
 
-
+'''
 classifier = Classifier("../resources/classified/candidates.fits", "../resources/classified/candidates.txt", tempParentDir=tempParentDir, debugPlot=True)
 classifier.getClassifiers()
 
-'''
+
 tiles = [Tile(os.path.abspath(tileDir + os.sep + f), classifier, tempParentDir=tempParentDir) for f in os.listdir(tileDir) if os.path.isfile(tileDir + os.sep + f) and f.endswith(".fits")]
 
 gcs = None
+psfs = None
 for tile in tiles:
     print("Getting GCs for tile %s" % tile.subName)
     newGCs = tile.getGlobalClusters()
+    cat = tile.getCatalog(tile.fitsPath)
+    psfList = tile.getPSFStars(tile.fitsPath, tile.catalog)
+    psf = cat[psfList[0] | psfList[1]]
+    psf = tile.getRAandDec(tile.fitsPath, psf)
+    
     if gcs is None:
         gcs = newGCs
     else:
         gcs = np.concatenate((gcs, newGCs))
+    if psfs is None:
+        psfs = psf
+    else:
+        print(psfs.shape)
+        print(psf.shape)
+        
+        psfs = np.concatenate((psfs, psf))
 
 
 
@@ -51,18 +64,34 @@ gc = apGCs.copy()
 for mosaic in mosaics:
     gc = mosaic.getPhot(gc)
 
+psfsColour = psfs.copy()
+for mosaic in mosaics:
+    psfsColour = mosaic.getPhot(psfsColour)
 
 dust = Dust()
 gcc = dust.correctExtinctions(gc.copy())
+psfc = dust.correctExtinctions(psfsColour.copy())
 gccd = addColourDiff(gcc)
-
-gccf = plotColourDifference(gccd)
+psfd = addColourDiff(psfc)
+'''
+print(gccd.shape)
+gccf = plotColourDifference(gccd, psfd)
+print("a",gccf.shape)
 gccf = gccf[gccf['KingFWHM'] < 15]
+print("b",gccf.shape)
+gccf = gccf[gccf['Z_MAG'] > 11.5]
+print("c",gccf.shape)
+gccf = gccf[np.abs(gccf['RMZ_9']) < 4]
+print("d",gccf.shape)
 
 
 colors = ['Chi2DeltaKingDiv']#, 'ELLIPTICITY', 'CI', 'CI2', 'KingFWHM']
 for c in colors:
     plotColourDiagrams(gccf, colourColumn=c)    
     
-    
-'''
+classA = gccf['Chi2DeltaKingDiv'] > 1.5
+classB = ~classA
+
+print(classA.sum())
+print(classB.sum())
+

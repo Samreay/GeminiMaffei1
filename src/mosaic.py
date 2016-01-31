@@ -89,8 +89,8 @@ class Mosaic(Reducer):
                 magE.append(np.NaN)
         return np.array(mag), np.array(magE)
         
-    def runPhot(self, fitsFile, cat, apertures=[2,5,8,11]):
-        outfile = self.outDir + os.sep + "outfile2.txt"
+    def runPhot(self, fitsFile, cat, apertures=[1,2,3,4,5,6,7,8,9,10,11]):
+        outfile = self.outDir + os.sep + "outfile_%d.txt"%cat.shape[0]
         if os.path.exists(outfile):
             mags = np.loadtxt(outfile)
         else:

@@ -33,7 +33,7 @@ class Classifier(Reducer):
         
         class1Exists = os.path.exists(class1Save)
         class2Exists = os.path.exists(class2Save)
-        
+
         if not (class1Exists and class2Exists):
             self._setupTempDir()
             self.mainCatalog = self.getCatalog(self.fitsFile, ishape=True)
@@ -43,11 +43,11 @@ class Classifier(Reducer):
             self.mainCatalog = append_fields(self.mainCatalog, 'HLR', np.zeros(self.mainCatalog.shape), usemask=False)    
             self.mainCatalog = append_fields(self.mainCatalog, 'MAG', np.zeros(self.mainCatalog.shape), usemask=False)
             self._trainClassifier()
-            joblib.dump(self.classifier, class1Save) 
-            joblib.dump(self.classifier2, class2Save) 
+            joblib.dump(self.sc, class1Save) 
+            joblib.dump(self.sc2, class2Save) 
         else:
-            self.classifier = joblib.load(class1Save)
-            self.classifier2 = joblib.load(class2Save)
+            self.sc = joblib.load(class1Save)
+            self.sc2 = joblib.load(class2Save)
             
         
 
@@ -274,7 +274,7 @@ class Classifier(Reducer):
         
     def _trainClassifier(self, ishape=True):
         
-        catalog, extendeds = self._getTrainingData(numImages=200, ishape=ishape)
+        catalog, extendeds = self._getTrainingData(numImages=300, ishape=ishape)
         self.catalog1 = catalog
         self._debug("Have data for %d extendeds out of %d objects (%0.2f%%)" % (catalog['EXTENDED'].sum(), catalog.shape[0], 100.0*catalog['EXTENDED'].sum()/catalog.shape[0]))
         y = 'EXTENDED'
@@ -283,7 +283,7 @@ class Classifier(Reducer):
         self._debug("Creating classifier")
 
         # Create and fit an AdaBoosted decision tree
-        self.sc = SmartClassifier(catalog,y,extendeds,remove=['NUMBER','X_IMAGE','Y_IMAGE','WEIGHT','HLR','MAG','Chi2DeltaKingDiv','Chi2DeltaKingSub','Chi2King','Chi2Delta','KingFWHM'])
+        self.sc = SmartClassifier("1",catalog,y,extendeds,remove=['NUMBER','X_IMAGE','Y_IMAGE','WEIGHT','HLR','MAG','Chi2DeltaKingDiv','Chi2DeltaKingSub','Chi2King','Chi2Delta','KingFWHM'])
         self.classifier = self.sc.learn()
         #bdt = AdaBoostClassifier(DecisionTreeClassifier(max_depth=2), algorithm="SAMME", n_estimators=strength)
         #bdt.fit(X, y, sample_weight=1+40*y)
@@ -291,7 +291,7 @@ class Classifier(Reducer):
         self.classifier.label = "Boosted Decision Tree"
         
         
-        self.sc2 = SmartClassifier(catalog,y,extendeds,remove=['NUMBER','X_IMAGE','Y_IMAGE','WEIGHT','HLR','MAG'])
+        self.sc2 = SmartClassifier("2",catalog,y,extendeds,remove=['NUMBER','X_IMAGE','Y_IMAGE','WEIGHT','HLR','MAG'])
         self.classifier2 = self.sc2.learn()
         #bdt = AdaBoostClassifier(DecisionTreeClassifier(max_depth=2), algorithm="SAMME", n_estimators=strength)
         #bdt.fit(X, y, sample_weight=1+40*y)
