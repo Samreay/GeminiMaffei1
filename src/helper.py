@@ -69,7 +69,48 @@ def showInDS9(fitsFile, catalog=None, cols=['X_IMAGE','Y_IMAGE']):
         except OSError as exc:
             if exc.errno != errno.ENOENT:
                 raise  # re-raise exception
-                
+
+def removeDoubles(catalog, threshold=4):
+    print("Removing duplicates. Starting with %d entries"%catalog.shape[0])
+    newCat = catalog.copy()
+    for i,row in enumerate(catalog):
+        x = row['X_IMAGE']
+        y = row['Y_IMAGE']
+        dists = np.sqrt((newCat['X_IMAGE']-x)*(newCat['X_IMAGE']-x) + (newCat['Y_IMAGE']-y)*(newCat['Y_IMAGE']-y))
+        dists[dists == 0] = 99
+        minDist = dists.argmin()
+        if (dists[minDist] < threshold):
+            newCat = np.delete(newCat, (minDist), axis=0)
+    print("Revmoed duplicates. Ending with %d entries"%newCat.shape[0])
+
+    return newCat
+    
+    
+def latexPrint(catalog,label, columns=['RA','DEC','Z_MAG','RMZ_11'], labels=["RA","DEC","$z'$","$r'-z'$"], positions=["l","l","c","c"], formats=["%s","%s", "%0.3f","%0.3f"]):
+    from astropy import units as u
+    from astropy.coordinates import SkyCoord
+    
+    
+    positions = positions
+    columns = columns
+    string = "\\begin{tabular}{l" + "".join(positions) + "}\n\\hline\n"
+    string += "ID "
+    for column in labels:
+        string += "& %s "%column
+    string += "\\\\\n\hline\n"
+    for i,row in enumerate(catalog):
+        c = SkyCoord(ra=row['RA']*u.degree, dec=row['DEC']*u.degree) 
+        rahms = c.ra.hms
+        string += "%s%d "%(label,i+1)
+        for f,column in zip(formats,columns):
+            string += ("& %s "%f)%row[column]
+        string += "\\\\\n"
+    string += "\\hline\n\\end{tabular}"
+    return string
+        
+    
+    
+
 def addColourDiff(catalog):
     cat = catalog.copy()
     apertures = [int(n[n.find("_")+1:]) for n in cat.dtype.names if n.find("R_") != -1]
@@ -187,3 +228,4 @@ def plotColourDiagrams(cat, colourColumn='Chi2DeltaKingDiv'):
     #axes[2].set_ylabel("$z'$", fontsize=16)
 
     plt.tight_layout()
+    fig.savefig("colour.pdf", bbox_inches="tight")

@@ -73,9 +73,11 @@ gcc = dust.correctExtinctions(gc.copy())
 psfc = dust.correctExtinctions(psfsColour.copy())
 gccd = addColourDiff(gcc)
 psfd = addColourDiff(psfc)
-'''
-print(gccd.shape)
-gccf = plotColourDifference(gccd, psfd)
+
+gccdd = removeDoubles(gccd)
+
+print(gccdd.shape)
+gccf = plotColourDifference(gccdd, psfd)
 print("a",gccf.shape)
 gccf = gccf[gccf['KingFWHM'] < 15]
 print("b",gccf.shape)
@@ -83,15 +85,16 @@ gccf = gccf[gccf['Z_MAG'] > 11.5]
 print("c",gccf.shape)
 gccf = gccf[np.abs(gccf['RMZ_9']) < 4]
 print("d",gccf.shape)
-
+'''
 
 colors = ['Chi2DeltaKingDiv']#, 'ELLIPTICITY', 'CI', 'CI2', 'KingFWHM']
 for c in colors:
     plotColourDiagrams(gccf, colourColumn=c)    
-    
+
+'''
 classA = gccf['Chi2DeltaKingDiv'] > 1.5
 classB = ~classA
 
 print(classA.sum())
-print(classB.sum())
+print(classB.sum())'''
 
