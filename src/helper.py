@@ -27,7 +27,6 @@ from sklearn.tree import DecisionTreeClassifier
 import subprocess
 import stat
 
-
 def showInDS9(fitsFile, catalog=None, cols=['X_IMAGE','Y_IMAGE']):
     try:
         tempDir = tempfile.mkdtemp()
@@ -86,7 +85,7 @@ def removeDoubles(catalog, threshold=4):
     return newCat
     
     
-def latexPrint(catalog,label, columns=['RA','DEC','Z_MAG','RMZ_11'], labels=["RA","DEC","$z'$","$r'-z'$"], positions=["l","l","c","c"], formats=["%s","%s", "%0.3f","%0.3f"]):
+def latexPrint(catalog,label, columns=['RA','DEC','ELLIPTICITY','Z_MAG','RMZ_11'], labels=["RA","DEC",r"$\epsilon$","$z'$","$r'-z'$"], positions=["l","l","c","c","c"], formats=["%s","%s", "%0.2f","%0.3f","%0.3f"]):
     from astropy import units as u
     from astropy.coordinates import SkyCoord
     
@@ -108,8 +107,36 @@ def latexPrint(catalog,label, columns=['RA','DEC','Z_MAG','RMZ_11'], labels=["RA
     string += "\\hline\n\\end{tabular}"
     return string
         
+def getZcal(z):
+    pz = -2.082443#-2.193601 #
+    return z - pz
     
+def getRcal(r, z):
+    pr = -2.697975
+    return r - pr
     
+def getIcal(i):
+    pi = -2.61702 #-2.717 #
+    return i - pi
+    
+def correctRAirMass(airmass):
+    ext = getAtmosphericAbsorption(6400)
+    return ext * airmass
+    
+def correctIAirMass(airmass):
+    ext = getAtmosphericAbsorption(7500)
+    return ext * airmass
+
+def correctZAirMass(airmass):
+    ext = getAtmosphericAbsorption(9440)
+    return ext * airmass    
+    
+def getAtmosphericAbsorption(angstroms):
+    x = [3100, 3200, 3400, 3600, 3800, 4000, 4500, 5000, 5500, 6000, 6500, 7000, 8000, 9000, 12500 ]
+    y = [1.37, 0.82, 0.51, 0.37, 0.30, 0.25, 0.17, 0.13, 0.12, 0.11, 0.11, 0.10, 0.07, 0.05, 0.015]
+    f = interp1d(x,y,kind="linear")
+    return f(angstroms)
+
 
 def addColourDiff(catalog):
     cat = catalog.copy()
