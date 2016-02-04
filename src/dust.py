@@ -107,7 +107,7 @@ class Dust(object):
         xs = np.arange(ext.shape[0])
         ys = np.arange(ext.shape[1])
         xx, yy = np.meshgrid(xs, ys)
-        f = interpolate.interp2d(xs, ys, ext, kind='cubic')        
+        f = interpolate.interp2d(xs, ys, ext, kind='linear')        
         
         self._debug("\tRunning sky2xy")
         tempDir = self.tempDir + os.sep + "sky2xy"

@@ -84,8 +84,15 @@ def removeDoubles(catalog, threshold=4):
 
     return newCat
     
+def addFWHM(cat):
+    as2Rad = np.pi / (180 * 60 * 60)
+    pixels = cat['KingFWHM']
+    parsecs = pixels / (0.2 / np.tan(2.7e6 * as2Rad)) 
+    cat = append_fields(cat, 'KFWHM', parsecs, usemask=False)
+    return cat
+
     
-def latexPrint(catalog,label, columns=['RA','DEC','ELLIPTICITY','Z_MAG','RMZ_11'], labels=["RA","DEC",r"$\epsilon$","$z'$","$r'-z'$"], positions=["l","l","c","c","c"], formats=["%s","%s", "%0.2f","%0.3f","%0.3f"]):
+def latexPrint(catalog,label, columns=['RA','DEC','ELLIPTICITY','Z_ABS', 'Z_MAG','RMZ_11', 'KFWHM'], labels=["RA","DEC",r"$\epsilon$","$M_{z'}$","$m_{z'}$","$r'-z'$", 'King$_{30}$ FWHM (pc)'], positions=["l","l","c","c","c","c","c"], formats=["%s","%s", "%0.2f","%0.3f","%0.3f","%0.3f","%0.2f"]):
     from astropy import units as u
     from astropy.coordinates import SkyCoord
     
@@ -99,10 +106,14 @@ def latexPrint(catalog,label, columns=['RA','DEC','ELLIPTICITY','Z_MAG','RMZ_11'
     string += "\\\\\n\hline\n"
     for i,row in enumerate(catalog):
         c = SkyCoord(ra=row['RA']*u.degree, dec=row['DEC']*u.degree) 
-        rahms = c.ra.hms
         string += "%s%d "%(label,i+1)
         for f,column in zip(formats,columns):
-            string += ("& %s "%f)%row[column]
+            val = row[column]
+            if column == 'RA':
+                val = r"$%d^\circ\,%d'\,%0.3f''$"%c.ra.dms
+            elif column == 'DEC':
+                val = r"$%d^\circ\,%d'\,%0.3f''$"%c.dec.dms
+            string += ("& %s "%f)%val
         string += "\\\\\n"
     string += "\\hline\n\\end{tabular}"
     return string
@@ -111,7 +122,7 @@ def getZcal(z):
     pz = -2.082443#-2.193601 #
     return z - pz
     
-def getRcal(r, z):
+def getRcal(r):
     pr = -2.697975
     return r - pr
     
@@ -137,10 +148,36 @@ def getAtmosphericAbsorption(angstroms):
     f = interp1d(x,y,kind="linear")
     return f(angstroms)
 
-
+mosaicZTime = 27
+mosaicRTime = 75
+mosaicITime = 27
 def addColourDiff(catalog):
     cat = catalog.copy()
     apertures = [int(n[n.find("_")+1:]) for n in cat.dtype.names if n.find("R_") != -1]
+    if 'Z_MAG' in cat.dtype.names:
+        cat['Z_MAG'] += 2.5*np.log10(mosaicZTime)
+        cat['Z_MAG'] = getZcal(cat['Z_MAG'])
+        cat['Z_MAG'] += correctZAirMass(1.6434 - 1.31)
+
+        cat = append_fields(cat, 'Z_ABS', getAbsolute(cat['Z_MAG']), usemask=False)    
+
+    for ap in apertures:
+        z = "Z_%d"%ap
+        r = "R_%d"%ap
+        i = "I_%d"%ap
+        cat[z] = getZcal(cat[z])
+        cat[z] += 2.5 * np.log10(mosaicZTime)
+        cat[z] += correctZAirMass(1.6434 - 1.31)
+
+        cat[r] = getRcal(cat[r])
+        cat[r] += correctRAirMass(1.5659 - 1.303)
+        cat[r] += 2.5 * np.log10(mosaicRTime)
+        
+        cat[i] = getIcal(cat[i])
+        cat[i] += 2.5 * np.log10(mosaicITime)
+        cat[i] += correctIAirMass(1.1082 - 1.32)
+
+
     
     for ap in apertures:
         z = "Z_%d"%ap
@@ -203,9 +240,37 @@ def plotColourDifference(cat, psfs, number=20, threshold=3):
     ax0.set_ylabel("$r' - z'$", fontsize=16)
     return cat[np.array(gcMask)]
         
+        
+def getAbsolute(apparent, distance=2.7e6):
+    return apparent - 2.5 * np.log10((distance/10)**2)
                 
-def plotColourDiagrams(cat, colourColumn='Chi2DeltaKingDiv'):
-    mag = cat['Z_MAG']
+                
+def plotSizeDiagrams(cat):
+    label=r"$\chi^2_{\rm{Delta}} / \chi^2_{\rm{King30}}$"
+    fig, ax0 = plt.subplots(figsize=(5,5))
+    ax0.invert_yaxis()
+    
+    y = cat['Z_ABS']
+    x = cat['KFWHM']
+    c = cat['Chi2DeltaKingDiv']
+    mask = cat['Z_MASK']
+    vmin = 1
+    vmax = 3
+    cmap = 'viridis'
+
+    h1 = ax0.scatter(x[mask], y[mask], c=c[mask],edgecolor="none", cmap=cmap,vmin=vmin, vmax=vmax) # 
+    ax0.set_ylabel(r"$M_{z'}$", fontsize=16)
+    ax0.set_xlabel(r"$\rm{King30\ FWHM\ (pc)}$", fontsize=16)
+    
+    divider = make_axes_locatable(ax0)
+    cax = divider.append_axes("right", size="5%", pad=0.05)
+    cb = plt.colorbar(h1, cax = cax)  
+    cb.set_label(label, fontsize=16)
+    
+    fig.savefig("kingFWHM.pdf", bbox_inches="tight")
+    
+def plotColourDiagrams(cat, colourColumn='Chi2DeltaKingDiv', label=r"$\chi^2_{\rm{Delta}} / \chi^2_{\rm{King30}}$"):
+    mag = cat['Z_ABS']
     z = cat['Z_8']
     i = cat['I_8']
     r = cat['R_8']
@@ -244,13 +309,13 @@ def plotColourDiagrams(cat, colourColumn='Chi2DeltaKingDiv'):
     cax = divider.append_axes("right", size="5%", pad=0.05)
     #cbaxes = fig.add_axes([0.905, 0.13, 0.01, 0.77])
     cb = plt.colorbar(h1, cax = cax)  
-    cb.set_label(colourColumn)
+    cb.set_label(label, fontsize=16)
     
     axes[0].set_xlabel("$i' - z'$", fontsize=16)
     axes[1].set_xlabel("$r' - i'$", fontsize=16)
     axes[2].set_xlabel("$r' - z'$", fontsize=16)
     
-    axes[0].set_ylabel("$z'$", fontsize=16)
+    axes[0].set_ylabel("$M_{z'}$", fontsize=16)
     #axes[1].set_ylabel("$i'$", fontsize=16)
     #axes[2].set_ylabel("$z'$", fontsize=16)
 

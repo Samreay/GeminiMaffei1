@@ -68,9 +68,11 @@ psfsColour = psfs.copy()
 for mosaic in mosaics:
     psfsColour = mosaic.getPhot(psfsColour)
 
+
 dust = Dust()
 gcc = dust.correctExtinctions(gc.copy())
 psfc = dust.correctExtinctions(psfsColour.copy())
+'''
 gccd = addColourDiff(gcc)
 psfd = addColourDiff(psfc)
 
@@ -81,20 +83,31 @@ gccf = plotColourDifference(gccdd, psfd)
 print("a",gccf.shape)
 gccf = gccf[gccf['KingFWHM'] < 15]
 print("b",gccf.shape)
-gccf = gccf[gccf['Z_MAG'] > 11.5]
+gccf = gccf[gccf['Z_ABS'] > -10.5]
 print("c",gccf.shape)
 gccf = gccf[np.abs(gccf['RMZ_9']) < 4]
 print("d",gccf.shape)
-'''
+gccf = gccf[gccf['KingFWHM'] > 0.1]
+print("e",gccf.shape)
+
+gccf = addFWHM(gccf)
 
 colors = ['Chi2DeltaKingDiv']#, 'ELLIPTICITY', 'CI', 'CI2', 'KingFWHM']
 for c in colors:
     plotColourDiagrams(gccf, colourColumn=c)    
 
-'''
+plotSizeDiagrams(gccf)    
+
+
 classA = gccf['Chi2DeltaKingDiv'] > 1.5
 classB = ~classA
 
 print(classA.sum())
-print(classB.sum())'''
+print(classB.sum())
+
+
+
+#print(latexPrint(gccf[classA][:10], "A"))
+#print("\n\n---\n\n")
+#print(latexPrint(gccf[classB][:10], "B"))
 

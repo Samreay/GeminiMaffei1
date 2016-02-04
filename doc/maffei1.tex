@@ -229,16 +229,12 @@ The input data was split into training, testing and validation sets, using ratio
 
 The extended candidates for each tile given by the initial machine learning algorithm were then processed through the task \verb|iShape|, a procedure in the \textsc{BAOlab} software package, to gather more information on the candidates. This step is done seperately as computational constraints hinder the ability to run \verb|iShape| on all detected sources, and so an initial candidate round must be selected. Information on $\chi^2$ of the King fit, $\chi^2$ of the delta model fit, and the fwhm of the King profile are added to the original data set. The manually selected candidates and artificially generated sources were also processed by \verb|iShape|, and the improved dataset was used to train a second classifier in a similar fashion to the first, which was designed to remove many of the false positives from the initial classifier and improve accuray on only partially resolved globular cluster candidates. The probability of detecting a source as a globular cluster correctly, as a function of half light radius $r_h$ and magnitude for the new classifier is shown in Figure \ref{fig:comp2}. It important to note that the success rates shown in Figure \ref{fig:comp2} cannot be directly applied to the real data and thus only provide estaimtes. The matching accuracy on other tiles is expected to be lower due to artificial modelling not reflecting all the variations and subtleties of real global clusters and the lack of modelling other sources, such as compact dwarfs, stanard galaxies and other astronomical phenomenon outside stars and globular clusters. 
 
-\begin{figure*}[h]
-	\includegraphics[width=\textwidth]{images/colour.pdf}
-	\caption{Colours}
-	\label{fig:colour}
-\end{figure*}
+
 
 
 \begin{figure}
 	\includegraphics[width=0.49\textwidth]{images/classifier_1.pdf}
-	\caption{The probability $P(r_h, \mu)$ of correctly classifying an extended object using the initial classifier supplied with data from \textsc{SExtractor}. Classification accuracy decreases as $r_h$ decreases, as the source becomes more pointlike. Similarly, we notice a that objects dimmer than a magnitude of {\color{red} PUT THIS IN WHEN YOU KNOW THE ACTUAL MAGNITUDES} are not classified correctly, as they are not detected by \textsc{SExtractor}.The maximum detection rate found corresponds to a $90\%$ chance of detection.}
+	\caption{The probability $P(r_h, m_{z'})$ of correctly classifying an extended object using the initial classifier supplied with data from \textsc{SExtractor}. Classification accuracy decreases as $r_h$ decreases, as the source becomes more pointlike. Similarly, we notice a that objects dimmer than an apparent $z'$ band magnitude of 16.5 are not classified correctly, as they are not detected by \textsc{SExtractor}.The maximum detection rate found corresponds to a $90\%$ chance of detection.}
 	\label{fig:comp1}
 \end{figure}
 \begin{figure}
@@ -249,38 +245,27 @@ The extended candidates for each tile given by the initial machine learning algo
 
 
 
-Each candidate underwent aperture photometry on the fully reduced mosaics mentioned in Section \ref{sec:obs}, where colour magnitude corrections were performed by interpolating the dust maps from \citet{Schlegel1998} and applying the band extinction to redding ratios from \citet{Schlafly2011}. Magnitude calibration was performed by using the Landolt set of standard stars \citep{Landolt1992}, that had been transformed via the equations given in \citet{Fukugita1996} into the SDSS system. {\color{blue} PUT MAGNITUDE BASELINE IN WHEN YOU DO IT. IT GOES BEFORE THE DUST CORRECTION MAYBE, ASK RICARDO} 
+Each candidate underwent aperture photometry on the fully reduced mosaics mentioned in Section \ref{sec:obs}, where colour magnitude corrections were performed by interpolating the dust maps from \citet{Schlegel1998} and applying the band extinction to redding ratios from \citet{Schlafly2011}. Magnitude calibration was performed by using the Landolt set of standard stars \citep{Landolt1992} that had been transformed via the equations given in \citet{Fukugita1996} into the SDSS system. Zero point magnitude calibrations were determined using the \verb|fitparams| task in \textsc{iraf}.
 
 Further pruning of the globular cluster candidates was performed removing unphysical outliers in the analysis, such as removing objects with a detected fwhm of over a ten arcseconds. In addition, ellipticity cutoffs, colour profile cuts and magnitude cuts were introduced to remove galaxies in the globular cluster candidate list. 
-
-
-
-{\color{blue} The extended sources were separated into 3 classes based on the visual
-appearance of their residuals in combination with their structural
-parameters measured with \textsc{SExtractor}: circular residuals with
-fwhm $< XX$ (class A), symmetric but elongated residuals where the
-source has $\epsilon< 0.3$ (class B), and finally, elongated residuals
-with $\epsilon > 0.3$ together with sources with very extended (fwhm$
-> 6$ pixels) or asymmetric residuals (class C). In the few cases where
-the source was not detected by SExtractor (usually because of the
-proximity of a bright star or the patchy Maffei 1 center), the
-classification was made only based on their visual appearance. The
-ellipticity limit of 0.3 was chosen since it contains all the
-ellipticities found for GCs in Local Group galaxies
-\citep[e.g.][]{vdb08}. These classes correlate with the likelihood of
-the sources being genuine Maffei 1 GCs based on their structure, with
-the round class-A objects having a higher probability of being genuine
-Maffei 1 GCs, and the elongated or large class-C sources, being most
-probably background galaxies.}
-
 
 
 \subsection{Globular clusters color-magnitude diagram}
 \label{sec:gc_cmd}
 
+\begin{figure*}
+	\includegraphics[width=\textwidth]{images/colour.pdf}
+	\caption{The determine colours of the GC candidates in the $r'$, $i'$ and $z'$ bands when applicable.{\color{red} put something interesting here} }
+	\label{fig:colour}
+\end{figure*}
+
 \subsection{Globular cluster sizes}
 \label{sec:gc_sizes}
-
+\begin{figure}
+	\includegraphics[width=\columnwidth]{images/kingFWHM.pdf}
+	\caption{The fitted FWHM of a King30 profile for each GC candidate. Pixel values were transformed into parsecs using a galactic distance of 2.7 Mpc. Brighter and more extended objects have better fits to the King 30 profile than a delta profile, as expected.}
+	\label{fig:kfwhm}
+\end{figure}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Discussion}
@@ -305,215 +290,22 @@ and AST-0909237.
 \label{sec:appendix}
 \begin{table*}
  \centering
- \caption{Photometry of ``Class A'' (see main text for its definition) globular cluster candidates.}
+ \caption{Photometry of the first ten ``Class A'' (see main text for its definition) globular cluster candidates. Absolute magnitudes have been computed using $D = 2.7\,\rm{Mpc}$.}
 \label{tab:class_a}  
-\begin{tabular}{lllc}
+\begin{tabular}{lllccccc}
 	\hline
-	ID & RA & DEC & $z'$ \\
+	ID & RA & DEC & $\epsilon$ & $M_{z'}$ & $m_{z'}$ & $r'-z'$ & King$_{30}$ FWHM (pc) \\
 	\hline
-	A1 & 39.53662 & 59.87483 & 15.166 \\
-	A2 & 39.5538 & 59.86687 & 14.076 \\
-	A3 & 39.4855 & 59.866 & 13.857 \\
-	A4 & 39.65265 & 59.8602 & 15.442 \\
-	A5 & 39.54418 & 59.83834 & 15.372 \\
-	A6 & 39.54475 & 59.83366 & 14.408 \\
-	A7 & 39.6551 & 59.82811 & 15.444 \\
-	A8 & 39.65404 & 59.82696 & 15.874 \\
-	A9 & 39.61442 & 59.82323 & 14.292 \\
-	A10 & 39.70516 & 59.81387 & 14.086 \\
-	A11 & 39.68117 & 59.80488 & 15.310 \\
-	A12 & 39.59766 & 59.78675 & 13.126 \\
-	A13 & 39.6995 & 59.77472 & 14.864 \\
-	A14 & 39.55484 & 59.77288 & 15.072 \\
-	A15 & 39.70985 & 59.76846 & 15.463 \\
-	A16 & 39.50526 & 59.7392 & 15.010 \\
-	A17 & 39.69786 & 59.73069 & 14.966 \\
-	A18 & 39.66334 & 59.71989 & 13.507 \\
-	A19 & 39.54081 & 59.70476 & 15.683 \\
-	A20 & 39.53812 & 59.68151 & 16.392 \\
-	A21 & 39.71023 & 59.67579 & 14.435 \\
-	A22 & 39.50506 & 59.66376 & 14.831 \\
-	A23 & 39.36006 & 59.87719 & 13.704 \\
-	A24 & 39.3432 & 59.87714 & 16.218 \\
-	A25 & 39.35974 & 59.87127 & 15.466 \\
-	A26 & 39.4717 & 59.86959 & 15.106 \\
-	A27 & 39.45114 & 59.86384 & 15.562 \\
-	A28 & 39.37591 & 59.8423 & 14.705 \\
-	A29 & 39.44419 & 59.83433 & 14.819 \\
-	A30 & 39.4512 & 59.78731 & 14.688 \\
-	A31 & 39.33312 & 59.77301 & 13.723 \\
-	A32 & 39.34408 & 59.75875 & 14.683 \\
-	A33 & 39.31949 & 59.74305 & 14.929 \\
-	A34 & 39.40843 & 59.71851 & 15.120 \\
-	A35 & 39.3711 & 59.68431 & 14.976 \\
-	A36 & 39.26102 & 59.66222 & 14.941 \\
-	A37 & 39.129 & 59.86855 & 16.035 \\
-	A38 & 39.15034 & 59.86288 & 15.630 \\
-	A39 & 39.05152 & 59.85099 & 15.525 \\
-	A40 & 39.14831 & 59.84906 & 14.093 \\
-	A41 & 39.16881 & 59.80869 & 15.874 \\
-	A42 & 39.16513 & 59.80659 & 14.286 \\
-	A43 & 39.06315 & 59.80051 & 16.102 \\
-	A44 & 39.08273 & 59.78456 & 14.729 \\
-	A45 & 39.12345 & 59.78061 & 15.616 \\
-	A46 & 39.11763 & 59.76076 & 14.368 \\
-	A47 & 38.92084 & 59.89318 & 15.716 \\
-	A48 & 38.95731 & 59.88389 & 15.758 \\
-	A49 & 38.89857 & 59.85564 & 16.311 \\
-	A50 & 38.98749 & 59.84892 & 15.310 \\
-	A51 & 38.81699 & 59.8382 & 14.735 \\
-	A52 & 38.90307 & 59.83059 & 15.719 \\
-	A53 & 38.92234 & 59.82842 & 14.717 \\
-	A54 & 38.92963 & 59.81045 & 16.624 \\
-	A55 & 38.88092 & 59.77829 & 16.324 \\
-	A56 & 38.90368 & 59.77481 & 12.949 \\
-	A57 & 38.98062 & 59.75234 & 16.631 \\
-	A58 & 38.93923 & 59.74271 & 15.963 \\
-	A59 & 38.87312 & 59.67813 & 16.203 \\
-	A60 & 38.98992 & 59.67149 & 14.977 \\
-	A61 & 38.89508 & 59.79097 & 13.505 \\
-	A62 & 38.80202 & 59.87425 & 12.066 \\
-	A63 & 38.59485 & 59.87265 & 15.308 \\
-	A64 & 38.80165 & 59.87009 & 13.758 \\
-	A65 & 38.79572 & 59.86403 & 14.714 \\
-	A66 & 38.62018 & 59.85273 & 13.647 \\
-	A67 & 38.74813 & 59.82928 & 15.451 \\
-	A68 & 38.57462 & 59.80854 & 11.674 \\
-	A69 & 38.60468 & 59.8037 & 15.287 \\
-	A70 & 38.68509 & 59.78852 & 15.884 \\
-	A71 & 38.59295 & 59.77769 & 15.218 \\
-	A72 & 38.75732 & 59.75496 & 15.922 \\
-	A73 & 38.59396 & 59.73594 & 15.775 \\
-	A74 & 38.76351 & 59.72351 & 14.044 \\
-	A75 & 38.55025 & 59.6677 & 12.224 \\
-	A76 & 38.74814 & 59.66273 & 15.896 \\
-	A77 & 38.61506 & 59.829 & 14.794 \\
-	A78 & 39.61949 & 59.616 & 15.491 \\
-	A79 & 39.52016 & 59.60546 & 16.061 \\
-	A80 & 39.69121 & 59.58927 & 16.426 \\
-	A81 & 39.5942 & 59.58907 & 14.999 \\
-	A82 & 39.49631 & 59.58129 & 15.026 \\
-	A83 & 39.52868 & 59.57788 & 15.433 \\
-	A84 & 39.49148 & 59.57145 & 15.432 \\
-	A85 & 39.48406 & 59.56905 & 16.210 \\
-	A86 & 39.57926 & 59.55808 & 16.204 \\
-	A87 & 39.60801 & 59.5408 & 16.166 \\
-	A88 & 39.68293 & 59.53461 & 14.690 \\
-	A89 & 39.69259 & 59.53326 & 16.442 \\
-	A90 & 39.61554 & 59.51352 & 15.469 \\
-	A91 & 39.70097 & 59.50916 & 15.637 \\
-	A92 & 39.61645 & 59.50665 & 14.655 \\
-	A93 & 39.70971 & 59.49434 & 12.283 \\
-	A94 & 39.59663 & 59.48763 & 15.718 \\
-	A95 & 39.60743 & 59.48038 & 14.904 \\
-	A96 & 39.59005 & 59.47775 & 14.581 \\
-	A97 & 39.67989 & 59.46438 & 13.766 \\
-	A98 & 39.58257 & 59.45928 & 15.633 \\
-	A99 & 39.49769 & 59.45795 & 14.403 \\
-	A100 & 39.62137 & 59.44032 & 15.813 \\
-	A101 & 39.69185 & 59.41413 & 13.965 \\
-	A102 & 39.66256 & 59.56163 & 14.389 \\
-	A103 & 39.57006 & 59.46563 & 12.491 \\
-	A104 & 39.41753 & 59.64783 & 15.827 \\
-	A105 & 39.42455 & 59.62976 & 16.448 \\
-	A106 & 39.43462 & 59.62911 & 14.877 \\
-	A107 & 39.45262 & 59.61688 & 16.599 \\
-	A108 & 39.4565 & 59.60096 & 14.623 \\
-	A109 & 39.34898 & 59.59536 & 16.073 \\
-	A110 & 39.49774 & 59.58709 & 16.179 \\
-	A111 & 39.42776 & 59.58464 & 15.268 \\
-	A112 & 39.4962 & 59.58155 & 15.026 \\
-	A113 & 39.43259 & 59.57254 & 16.667 \\
-	A114 & 39.39055 & 59.57026 & 15.174 \\
-	A115 & 39.48387 & 59.56931 & 16.211 \\
-	A116 & 39.41228 & 59.56253 & 16.274 \\
-	A117 & 39.31464 & 59.56091 & 15.466 \\
-	A118 & 39.36814 & 59.55102 & 14.057 \\
-	A119 & 39.30601 & 59.54751 & 16.017 \\
-	A120 & 39.30997 & 59.54743 & 15.315 \\
-	A121 & 39.44564 & 59.53816 & 16.595 \\
-	A122 & 39.32545 & 59.53404 & 16.836 \\
-	A123 & 39.33705 & 59.51848 & 13.347 \\
-	A124 & 39.37573 & 59.49611 & 17.039 \\
-	A125 & 39.31001 & 59.49473 & 15.865 \\
-	A126 & 39.43585 & 59.4847 & 15.764 \\
-	A127 & 39.28474 & 59.48237 & 15.549 \\
-	A128 & 39.32756 & 59.48048 & 16.278 \\
-	A129 & 39.34122 & 59.4777 & 15.867 \\
-	A130 & 39.45625 & 59.46122 & 15.433 \\
-	A131 & 39.34112 & 59.45775 & 15.771 \\
-	A132 & 39.29916 & 59.45688 & 15.754 \\
-	A133 & 39.30504 & 59.45573 & 15.842 \\
-	A134 & 39.43828 & 59.45341 & 15.909 \\
-	A135 & 39.46109 & 59.44139 & 16.292 \\
-	A136 & 39.29056 & 59.42891 & 15.550 \\
-	A137 & 39.11661 & 59.62368 & 15.439 \\
-	A138 & 39.04697 & 59.60453 & 15.066 \\
-	A139 & 39.18281 & 59.60141 & 14.156 \\
-	A140 & 39.07679 & 59.58452 & 16.582 \\
-	A141 & 39.09428 & 59.57016 & 16.122 \\
-	A142 & 39.19063 & 59.56837 & 15.439 \\
-	A143 & 39.10867 & 59.56819 & 15.247 \\
-	A144 & 39.0848 & 59.56456 & 15.415 \\
-	A145 & 39.11213 & 59.56282 & 15.867 \\
-	A146 & 39.0691 & 59.54425 & 15.877 \\
-	A147 & 39.0903 & 59.54014 & 16.041 \\
-	A148 & 39.21425 & 59.53834 & 14.784 \\
-	A149 & 39.21096 & 59.5352 & 14.696 \\
-	A150 & 39.23919 & 59.53512 & 15.910 \\
-	A151 & 39.19135 & 59.52468 & 16.470 \\
-	A152 & 39.07398 & 59.52395 & 16.299 \\
-	A153 & 39.14851 & 59.51831 & 16.498 \\
-	A154 & 39.06195 & 59.51182 & 15.321 \\
-	A155 & 39.09356 & 59.51011 & 13.971 \\
-	A156 & 39.16158 & 59.49998 & 15.393 \\
-	A157 & 39.13132 & 59.48859 & 14.081 \\
-	A158 & 39.13226 & 59.44967 & 15.532 \\
-	A159 & 39.17344 & 59.44835 & 16.342 \\
-	A160 & 39.21154 & 59.44713 & 15.164 \\
-	A161 & 39.053 & 59.44735 & 16.135 \\
-	A162 & 39.18317 & 59.44336 & 14.729 \\
-	A163 & 39.23898 & 59.44297 & 14.849 \\
-	A164 & 39.11149 & 59.4191 & 15.840 \\
-	A165 & 39.07342 & 59.48995 & 13.931 \\
-	A166 & 38.92566 & 59.65387 & 15.438 \\
-	A167 & 38.89102 & 59.63565 & 15.892 \\
-	A168 & 38.82558 & 59.60564 & 16.069 \\
-	A169 & 38.94682 & 59.60287 & 14.879 \\
-	A170 & 39.00447 & 59.57514 & 15.750 \\
-	A171 & 38.97429 & 59.5672 & 15.233 \\
-	A172 & 38.97799 & 59.55055 & 14.379 \\
-	A173 & 38.97619 & 59.55053 & 14.849 \\
-	A174 & 38.89836 & 59.55001 & 16.484 \\
-	A175 & 38.87425 & 59.54539 & 14.851 \\
-	A176 & 38.85417 & 59.54556 & 16.164 \\
-	A177 & 39.00169 & 59.50915 & 15.116 \\
-	A178 & 38.84132 & 59.50899 & 16.795 \\
-	A179 & 38.87057 & 59.48046 & 15.843 \\
-	A180 & 39.00309 & 59.46037 & 14.625 \\
-	A181 & 38.79749 & 59.45167 & 15.067 \\
-	A182 & 38.91709 & 59.43496 & 15.081 \\
-	A183 & 38.78149 & 59.42986 & 14.826 \\
-	A184 & 38.91718 & 59.42028 & 14.333 \\
-	A185 & 38.89189 & 59.41555 & 14.916 \\
-	A186 & 38.73252 & 59.64665 & 15.540 \\
-	A187 & 38.59195 & 59.64327 & 15.838 \\
-	A188 & 38.72569 & 59.63749 & 15.829 \\
-	A189 & 38.65885 & 59.63805 & 16.032 \\
-	A190 & 38.68883 & 59.61985 & 15.703 \\
-	A191 & 38.77578 & 59.5458 & 15.323 \\
-	A192 & 38.64706 & 59.52967 & 15.223 \\
-	A193 & 38.75256 & 59.5224 & 14.705 \\
-	A194 & 38.74455 & 59.5094 & 14.363 \\
-	A195 & 38.71301 & 59.49244 & 16.486 \\
-	A196 & 38.59186 & 59.47007 & 14.250 \\
-	A197 & 38.69092 & 59.45516 & 12.722 \\
-	A198 & 38.64409 & 59.45482 & 15.589 \\
-	A199 & 38.77544 & 59.44787 & 15.486 \\
-	A200 & 38.60395 & 59.63539 & 14.927 \\
-	A201 & 38.6977 & 59.48906 & 13.858 \\
-	A202 & 38.69486 & 59.48697 & 12.533 \\
-	A203 & 38.63019 & 59.42305 & 15.309 \\
+	A1 & $39^\circ\,34'\,26.472''$ & $59^\circ\,53'\,22.920''$ & 0.03 & -12.120 & 15.037 & 1.258 & 1.15 \\
+	A2 & $39^\circ\,32'\,11.832''$ & $59^\circ\,52'\,29.388''$ & 0.10 & -6.315 & 20.842 & 2.587 & 4.88 \\
+	A3 & $39^\circ\,33'\,13.680''$ & $59^\circ\,52'\,0.732''$ & 0.07 & -7.405 & 19.752 & 2.475 & 7.04 \\
+	A4 & $39^\circ\,29'\,7.800''$ & $59^\circ\,51'\,57.600''$ & 0.25 & -7.624 & 19.533 & 2.525 & 4.10 \\
+	A5 & $39^\circ\,39'\,9.540''$ & $59^\circ\,51'\,36.720''$ & 0.17 & -6.039 & 21.118 & 2.119 & 3.64 \\
+	A6 & $39^\circ\,32'\,39.048''$ & $59^\circ\,50'\,18.024''$ & 0.20 & -6.108 & 21.048 & 2.398 & 3.84 \\
+	A7 & $39^\circ\,32'\,41.100''$ & $59^\circ\,50'\,1.176''$ & 0.24 & -7.073 & 20.084 & 2.526 & 6.64 \\
+	A8 & $39^\circ\,39'\,18.360''$ & $59^\circ\,49'\,41.196''$ & 0.10 & -6.037 & 21.120 & 2.622 & 5.48 \\
+	A9 & $39^\circ\,39'\,14.544''$ & $59^\circ\,49'\,37.056''$ & 0.16 & -5.606 & 21.550 & 2.567 & 10.54 \\
+	A10 & $39^\circ\,36'\,51.912''$ & $59^\circ\,49'\,23.628''$ & 0.17 & -7.189 & 19.968 & 2.227 & 11.32 \\
 	\hline
 \end{tabular}
 \end{table*}
@@ -521,27 +313,23 @@ and AST-0909237.
 
 \begin{table*}
  \centering
-  \caption{Photometry of ``Class B'' globular cluster candidates.}
+  \caption{Photometry of the first ten ``Class B'' globular cluster candidates. Absolute magnitudes have been computed using $D = 2.7\,\rm{Mpc}$.}
 \label{tab:class_b}  
-\begin{tabular}{@{}lllccccl@{}}
-  \hline
-ID & RA & Dec &$r'$& $i'$& $z'$& $\epsilon$& Notes\\
- \hline
-
-\hline
-\end{tabular}
-\end{table*}
-
-\begin{table*}
- \centering
-  \caption{Photometry of ``Class C'' globular cluster candidates.}
-\label{tab:class_c}  
-\begin{tabular}{@{}lllccccl@{}}
-  \hline
-ID & RA & Dec &$r'$& $i'$& $z'$& $\epsilon$& Notes\\
- \hline
-
-\hline
+\begin{tabular}{lllccccc}
+	\hline
+	ID & RA & DEC & $\epsilon$ & $M_{z'}$ & $m_{z'}$ & $r'-z'$ & King$_{30}$ FWHM (pc) \\
+	\hline
+	B1 & $39^\circ\,35'\,27.204''$ & $59^\circ\,54'\,6.984''$ & 0.07 & -8.051 & 19.106 & 1.652 & 1.50 \\
+	B2 & $39^\circ\,37'\,49.872''$ & $59^\circ\,53'\,26.376''$ & 0.22 & -7.342 & 19.814 & 2.212 & 1.24 \\
+	B3 & $39^\circ\,33'\,14.724''$ & $59^\circ\,53'\,23.316''$ & 0.13 & -5.830 & 21.327 & 2.030 & 0.95 \\
+	B4 & $39^\circ\,29'\,59.280''$ & $59^\circ\,53'\,6.648''$ & 0.23 & -5.134 & 22.022 & 1.921 & 8.14 \\
+	B5 & $39^\circ\,35'\,49.848''$ & $59^\circ\,52'\,56.424''$ & 0.08 & -5.157 & 22.000 & 2.821 & 1.91 \\
+	B6 & $39^\circ\,31'\,38.388''$ & $59^\circ\,52'\,39.648''$ & 0.10 & -4.878 & 22.279 & 2.101 & 6.32 \\
+	B7 & $39^\circ\,29'\,15.288''$ & $59^\circ\,52'\,25.788''$ & 0.19 & -5.080 & 22.077 & 2.187 & 3.35 \\
+	B8 & $39^\circ\,43'\,37.632''$ & $59^\circ\,51'\,57.060''$ & 0.18 & -7.197 & 19.960 & 2.477 & 4.42 \\
+	B9 & $39^\circ\,35'\,8.916''$ & $59^\circ\,51'\,57.312''$ & 0.02 & -6.022 & 21.135 & 3.428 & 1.33 \\
+	B10 & $39^\circ\,33'\,59.148''$ & $59^\circ\,51'\,36.432''$ & 0.05 & -11.998 & 15.159 & 0.863 & 1.41 \\
+	\hline
 \end{tabular}
 \end{table*}
 

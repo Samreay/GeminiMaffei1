@@ -43,7 +43,10 @@ class SmartClassifier(object):
         x = catalog[self.columns].view(np.float64).reshape(catalog.shape + (-1,))
         return self.classifier.predict(x)
         
+        
             
+        
+        
     def learn(self):
         self.classifier = self.getBestClassifier()
         return self.classifier
@@ -132,23 +135,25 @@ class SmartClassifier(object):
         
         extendedMags = other[:,2]
         extendedHLRs = other[:,3]
-        minMag = max(extendedMags.min(), 11)
-        maxMag = min(extendedMags.max(), 17)
+        magOffset = 0.52434749611761644
+        minMag = max(extendedMags.min(), 11)+magOffset
+        maxMag = min(extendedMags.max(), 17)+magOffset
         minHLR = max(extendedHLRs.min(),1)
         maxHLR = min(extendedHLRs.max(),10)
         print(minMag, maxMag, minHLR, maxHLR)
         res = 8
         hlrs = np.linspace(minHLR, maxHLR, res)
         mags = np.linspace(minMag, maxMag, res)
-        hTotal, xedg, yedg = np.histogram2d(extendedHLRs, extendedMags, bins=[hlrs, mags])
+        hTotal, xedg, yedg = np.histogram2d(extendedHLRs, extendedMags+magOffset, bins=[hlrs, mags])
         
         foundHLRs = []
         foundMags = []
+        
 
         for i,row in enumerate(catalog):
             if z[i] == 1 and row[self.y] and row['WEIGHT'] == 0:
                 foundHLRs.append(row['HLR'])
-                foundMags.append(row['MAG'])
+                foundMags.append(row['MAG']+magOffset)
         foundHLRs = np.array(foundHLRs)
         foundMags = np.array(foundMags)
         hFound, xedg, yedg = np.histogram2d(foundHLRs, foundMags, bins=[hlrs, mags])

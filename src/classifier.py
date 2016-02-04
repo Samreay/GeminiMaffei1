@@ -49,7 +49,6 @@ class Classifier(Reducer):
             self.sc = joblib.load(class1Save)
             self.sc2 = joblib.load(class2Save)
             
-        
 
         #self._testClassifier(catalog, candidateMask)
         #self._cleanTempDir()
@@ -293,6 +292,7 @@ class Classifier(Reducer):
         
         self.sc2 = SmartClassifier("2",catalog,y,extendeds,remove=['NUMBER','X_IMAGE','Y_IMAGE','WEIGHT','HLR','MAG'])
         self.classifier2 = self.sc2.learn()
+                
         #bdt = AdaBoostClassifier(DecisionTreeClassifier(max_depth=2), algorithm="SAMME", n_estimators=strength)
         #bdt.fit(X, y, sample_weight=1+40*y)
         self._debug("Classifier2 created")
