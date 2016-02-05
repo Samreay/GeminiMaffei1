@@ -72,42 +72,56 @@ for mosaic in mosaics:
 dust = Dust()
 gcc = dust.correctExtinctions(gc.copy())
 psfc = dust.correctExtinctions(psfsColour.copy())
-'''
+
 gccd = addColourDiff(gcc)
 psfd = addColourDiff(psfc)
+'''
 
+'''
+print("Before doubles",gccd.shape)
 gccdd = removeDoubles(gccd)
+print("After doubles",gccdd.shape)
 
 print(gccdd.shape)
 gccf = plotColourDifference(gccdd, psfd)
 print("a",gccf.shape)
 gccf = gccf[gccf['KingFWHM'] < 15]
 print("b",gccf.shape)
-gccf = gccf[gccf['Z_ABS'] > -10.5]
-print("c",gccf.shape)
 gccf = gccf[np.abs(gccf['RMZ_9']) < 4]
 print("d",gccf.shape)
 gccf = gccf[gccf['KingFWHM'] > 0.1]
 print("e",gccf.shape)
+gccf = gccf[gccf['Z_ABS'] > -11]
+print("c",gccf.shape)
 
 gccf = addFWHM(gccf)
 
+'''
+
+g = getDists(gccf)
+plotDist(g)
+
+
+'''
 colors = ['Chi2DeltaKingDiv']#, 'ELLIPTICITY', 'CI', 'CI2', 'KingFWHM']
 for c in colors:
-    plotColourDiagrams(gccf, colourColumn=c)    
+    plotColourDiagrams(g, colourColumn=c)    
 
-plotSizeDiagrams(gccf)    
+plotSizeDiagrams(g)    
+'''
 
-
-classA = gccf['Chi2DeltaKingDiv'] > 1.5
+classA = g['Chi2DeltaKingDiv'] > 1.5
 classB = ~classA
+
+np.savetxt("classA.txt",g[classA][['RA','DEC']])
+np.savetxt("classB.txt",g[classB][['RA','DEC']])
 
 print(classA.sum())
 print(classB.sum())
 
 
-
-#print(latexPrint(gccf[classA][:10], "A"))
-#print("\n\n---\n\n")
-#print(latexPrint(gccf[classB][:10], "B"))
-
+'''
+print(latexPrint(g[classA][:15], "A"))
+print("\n\n---\n\n")
+print(latexPrint(g[classB][:15], "B"))
+'''

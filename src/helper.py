@@ -69,7 +69,7 @@ def showInDS9(fitsFile, catalog=None, cols=['X_IMAGE','Y_IMAGE']):
             if exc.errno != errno.ENOENT:
                 raise  # re-raise exception
 
-def removeDoubles(catalog, threshold=4):
+def removeDoubles(catalog, threshold=10):
     print("Removing duplicates. Starting with %d entries"%catalog.shape[0])
     newCat = catalog.copy()
     for i,row in enumerate(catalog):
@@ -110,9 +110,9 @@ def latexPrint(catalog,label, columns=['RA','DEC','ELLIPTICITY','Z_ABS', 'Z_MAG'
         for f,column in zip(formats,columns):
             val = row[column]
             if column == 'RA':
-                val = r"$%d^\circ\,%d'\,%0.3f''$"%c.ra.dms
+                val = r"$%d^{\rm{h}}\,%d^{\rm{m}}\,%0.1f^{\rm{s}}$"%c.ra.hms
             elif column == 'DEC':
-                val = r"$%d^\circ\,%d'\,%0.3f''$"%c.dec.dms
+                val = r"$%d^\circ\,%d'\,%0.2f''$"%c.dec.dms
             string += ("& %s "%f)%val
         string += "\\\\\n"
     string += "\\hline\n\\end{tabular}"
@@ -148,9 +148,9 @@ def getAtmosphericAbsorption(angstroms):
     f = interp1d(x,y,kind="linear")
     return f(angstroms)
 
-mosaicZTime = 27
-mosaicRTime = 75
-mosaicITime = 27
+mosaicZTime = 10#27
+mosaicRTime = 10#75
+mosaicITime = 10#27
 def addColourDiff(catalog):
     cat = catalog.copy()
     apertures = [int(n[n.find("_")+1:]) for n in cat.dtype.names if n.find("R_") != -1]
@@ -185,6 +185,33 @@ def addColourDiff(catalog):
         diff = cat[r] - cat[z]
         cat = append_fields(cat, 'RMZ_%d'%ap, diff, usemask=False)    
     return cat
+    
+    
+def getDists(cat):
+    mr = 39.1477583
+    md = 59.654872
+    
+    dists = np.sqrt((cat['RA']-mr)**2 + (cat['DEC']-md)**2)
+    dists *= 60
+    cat = append_fields(cat, 'DIST', dists, usemask=False)
+    return cat
+
+def plotDist(cat):
+    h, e = np.histogram(cat['DIST'], bins=[0,2.5,5,7.5,10,15,20,25,30,35])
+    c = 0.5 * (e[:-1] + e[1:])
+    
+    density = 1.0 * h / ((np.pi * e[1:] *e[1:]) - (np.pi * e[:-1] * e[:-1]))
+    d2 = density / density.max()
+    
+    fig, ax0 = plt.subplots(figsize=(5,4), ncols=1, sharey=True)
+    #ax0.plot(c, 1.0*h/h.max(), 'b', label="By radius")
+    ax0.plot(c, d2, 'b', label="Normalised by area")
+    #ax0.legend(loc=4)
+    ax0.set_xlabel(r"$\rm{Arcminutes\ from\ Maffei\ 1\ center}$", fontsize=16)
+    ax0.set_ylabel(r"$\rm{Relaitve\ area\ density}$", fontsize=16)
+    plt.tight_layout()
+    fig.savefig("density.pdf", bbox_inches="tight")
+    
     
 def plotColourDifference(cat, psfs, number=20, threshold=3):
     

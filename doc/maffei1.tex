@@ -1,9 +1,11 @@
 \documentclass[useAMS,usenatbib]{mn2e}
+
+
 \usepackage{times,graphicx,hyperref}
 \usepackage{amssymb}
 \usepackage[usenames, dvipsnames]{color}
-\usepackage{longtable}
 
+\usepackage{lipsum}
 
 %%%%% AUTHORS - PLACE YOUR OWN MACROS HERE %%%%%
 \def\farcs{\hbox{$.\!\!^{\prime\prime}$}}
@@ -229,19 +231,32 @@ The input data was split into training, testing and validation sets, using ratio
 
 The extended candidates for each tile given by the initial machine learning algorithm were then processed through the task \verb|iShape|, a procedure in the \textsc{BAOlab} software package, to gather more information on the candidates. This step is done seperately as computational constraints hinder the ability to run \verb|iShape| on all detected sources, and so an initial candidate round must be selected. Information on $\chi^2$ of the King fit, $\chi^2$ of the delta model fit, and the fwhm of the King profile are added to the original data set. The manually selected candidates and artificially generated sources were also processed by \verb|iShape|, and the improved dataset was used to train a second classifier in a similar fashion to the first, which was designed to remove many of the false positives from the initial classifier and improve accuray on only partially resolved globular cluster candidates. The probability of detecting a source as a globular cluster correctly, as a function of half light radius $r_h$ and magnitude for the new classifier is shown in Figure \ref{fig:comp2}. It important to note that the success rates shown in Figure \ref{fig:comp2} cannot be directly applied to the real data and thus only provide estaimtes. The matching accuracy on other tiles is expected to be lower due to artificial modelling not reflecting all the variations and subtleties of real global clusters and the lack of modelling other sources, such as compact dwarfs, stanard galaxies and other astronomical phenomenon outside stars and globular clusters. 
 
-
-
-
-\begin{figure}
-	\includegraphics[width=0.49\textwidth]{images/classifier_1.pdf}
+\begin{figure*}
+	\centering
+	\begin{minipage}[b]{.49\textwidth}
+	\includegraphics[width=\textwidth]{images/classifier_1.pdf}
 	\caption{The probability $P(r_h, m_{z'})$ of correctly classifying an extended object using the initial classifier supplied with data from \textsc{SExtractor}. Classification accuracy decreases as $r_h$ decreases, as the source becomes more pointlike. Similarly, we notice a that objects dimmer than an apparent $z'$ band magnitude of 16.5 are not classified correctly, as they are not detected by \textsc{SExtractor}.The maximum detection rate found corresponds to a $90\%$ chance of detection.}
 	\label{fig:comp1}
-\end{figure}
-\begin{figure}
-	\includegraphics[width=0.49\textwidth]{images/classifier_2.pdf}
-	\caption{The probability $P(r_h, \mu)$ of correctly classifying an extended object using the secondary classifier, that is supplied with both data from \textsc{SExtractor} and data from \textsc{IShape} fitting to a King profile. The fitting information allows increased discrimination between point sources and extended objects at lower values of $r_h$. The maximum chance of detection mirrors that found in Figure \ref{fig:comp1} at $90\%$.}
-	\label{fig:comp2}
-\end{figure}
+	\end{minipage}\hfill
+	\begin{minipage}[b]{.49\textwidth}
+		\includegraphics[width=\textwidth]{images/classifier_2.pdf}
+		\caption{The probability $P(r_h, \mu)$ of correctly classifying an extended object using the secondary classifier, that is supplied with both data from \textsc{SExtractor} and data from \textsc{IShape} fitting to a King profile. The fitting information allows increased discrimination between point sources and extended objects at lower values of $r_h$. The maximum chance of detection mirrors that found in Figure \ref{fig:comp1} at $90\%$. Detection rates to not increase furthr as the limiting factor becomes \textsc{SExtractor}'s detection and not the classifier.}
+		\label{fig:comp2}
+	\end{minipage}
+\end{figure*}
+
+%
+%
+%\begin{figure}
+%	\includegraphics[width=0.49\textwidth]{images/classifier_1.pdf}
+%	\caption{The probability $P(r_h, m_{z'})$ of correctly classifying an extended object using the initial classifier supplied with data from \textsc{SExtractor}. Classification accuracy decreases as $r_h$ decreases, as the source becomes more pointlike. Similarly, we notice a that objects dimmer than an apparent $z'$ band magnitude of 16.5 are not classified correctly, as they are not detected by \textsc{SExtractor}.The maximum detection rate found corresponds to a $90\%$ chance of detection.}
+%	\label{fig:comp1}
+%\end{figure}
+%\begin{figure}
+%	\includegraphics[width=0.49\textwidth]{images/classifier_2.pdf}
+%	\caption{The probability $P(r_h, \mu)$ of correctly classifying an extended object using the secondary classifier, that is supplied with both data from \textsc{SExtractor} and data from \textsc{IShape} fitting to a King profile. The fitting information allows increased discrimination between point sources and extended objects at lower values of $r_h$. The maximum chance of detection mirrors that found in Figure \ref{fig:comp1} at $90\%$.}
+%	\label{fig:comp2}
+%\end{figure}
 
 
 
@@ -259,6 +274,8 @@ Further pruning of the globular cluster candidates was performed removing unphys
 	\label{fig:colour}
 \end{figure*}
 
+\lipsum[1-2]
+
 \subsection{Globular cluster sizes}
 \label{sec:gc_sizes}
 \begin{figure}
@@ -267,14 +284,19 @@ Further pruning of the globular cluster candidates was performed removing unphys
 	\label{fig:kfwhm}
 \end{figure}
 
+\lipsum[1-2]
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Discussion}
 \label{sec:discussion}
+
+\lipsum[1-2]
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Summary and conclusions}
 \label{sec:conclusions}
 
+\lipsum[1-2]
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section*{Acknowledgments}
@@ -286,9 +308,17 @@ and AST-0909237.
 \bibliography{maffei1}
 
 \appendix
+\onecolumn
 \section{Globular cluster candidates photometry}
 \label{sec:appendix}
-\begin{table*}
+
+
+
+\lipsum[1]
+
+
+
+\begin{table}
  \centering
  \caption{Photometry of the first ten ``Class A'' (see main text for its definition) globular cluster candidates. Absolute magnitudes have been computed using $D = 2.7\,\rm{Mpc}$.}
 \label{tab:class_a}  
@@ -296,22 +326,27 @@ and AST-0909237.
 	\hline
 	ID & RA & DEC & $\epsilon$ & $M_{z'}$ & $m_{z'}$ & $r'-z'$ & King$_{30}$ FWHM (pc) \\
 	\hline
-	A1 & $39^\circ\,34'\,26.472''$ & $59^\circ\,53'\,22.920''$ & 0.03 & -12.120 & 15.037 & 1.258 & 1.15 \\
-	A2 & $39^\circ\,32'\,11.832''$ & $59^\circ\,52'\,29.388''$ & 0.10 & -6.315 & 20.842 & 2.587 & 4.88 \\
-	A3 & $39^\circ\,33'\,13.680''$ & $59^\circ\,52'\,0.732''$ & 0.07 & -7.405 & 19.752 & 2.475 & 7.04 \\
-	A4 & $39^\circ\,29'\,7.800''$ & $59^\circ\,51'\,57.600''$ & 0.25 & -7.624 & 19.533 & 2.525 & 4.10 \\
-	A5 & $39^\circ\,39'\,9.540''$ & $59^\circ\,51'\,36.720''$ & 0.17 & -6.039 & 21.118 & 2.119 & 3.64 \\
-	A6 & $39^\circ\,32'\,39.048''$ & $59^\circ\,50'\,18.024''$ & 0.20 & -6.108 & 21.048 & 2.398 & 3.84 \\
-	A7 & $39^\circ\,32'\,41.100''$ & $59^\circ\,50'\,1.176''$ & 0.24 & -7.073 & 20.084 & 2.526 & 6.64 \\
-	A8 & $39^\circ\,39'\,18.360''$ & $59^\circ\,49'\,41.196''$ & 0.10 & -6.037 & 21.120 & 2.622 & 5.48 \\
-	A9 & $39^\circ\,39'\,14.544''$ & $59^\circ\,49'\,37.056''$ & 0.16 & -5.606 & 21.550 & 2.567 & 10.54 \\
-	A10 & $39^\circ\,36'\,51.912''$ & $59^\circ\,49'\,23.628''$ & 0.17 & -7.189 & 19.968 & 2.227 & 11.32 \\
+	A1 & $2^{\rm{h}}\,38^{\rm{m}}\,8.8^{\rm{s}}$ & $59^\circ\,52'\,29.39''$ & 0.10 & -7.399 & 19.757 & 1.473 & 4.88 \\
+	A2 & $2^{\rm{h}}\,38^{\rm{m}}\,12.9^{\rm{s}}$ & $59^\circ\,52'\,0.73''$ & 0.07 & -8.487 & 18.670 & 1.363 & 7.04 \\
+	A3 & $2^{\rm{h}}\,37^{\rm{m}}\,56.5^{\rm{s}}$ & $59^\circ\,51'\,57.60''$ & 0.25 & -8.708 & 18.449 & 1.411 & 4.10 \\
+	A4 & $2^{\rm{h}}\,38^{\rm{m}}\,36.6^{\rm{s}}$ & $59^\circ\,51'\,36.72''$ & 0.17 & -7.123 & 20.033 & 1.004 & 3.64 \\
+	A5 & $2^{\rm{h}}\,38^{\rm{m}}\,10.6^{\rm{s}}$ & $59^\circ\,50'\,18.02''$ & 0.20 & -7.194 & 19.963 & 1.282 & 3.84 \\
+	A6 & $2^{\rm{h}}\,38^{\rm{m}}\,10.7^{\rm{s}}$ & $59^\circ\,50'\,1.18''$ & 0.24 & -8.158 & 18.999 & 1.412 & 6.64 \\
+	A7 & $2^{\rm{h}}\,38^{\rm{m}}\,37.2^{\rm{s}}$ & $59^\circ\,49'\,41.20''$ & 0.10 & -7.116 & 20.041 & 1.512 & 5.48 \\
+	A8 & $2^{\rm{h}}\,38^{\rm{m}}\,37.0^{\rm{s}}$ & $59^\circ\,49'\,37.06''$ & 0.16 & -6.685 & 20.471 & 1.458 & 10.54 \\
+	A9 & $2^{\rm{h}}\,38^{\rm{m}}\,27.5^{\rm{s}}$ & $59^\circ\,49'\,23.63''$ & 0.17 & -8.271 & 18.886 & 1.114 & 11.32 \\
+	A10 & $2^{\rm{h}}\,38^{\rm{m}}\,49.2^{\rm{s}}$ & $59^\circ\,48'\,49.93''$ & 0.11 & -8.477 & 18.680 & 0.919 & 9.81 \\
+	A11 & $2^{\rm{h}}\,38^{\rm{m}}\,43.5^{\rm{s}}$ & $59^\circ\,48'\,17.57''$ & 0.18 & -7.249 & 19.908 & 1.412 & 4.85 \\
+	A12 & $2^{\rm{h}}\,38^{\rm{m}}\,23.4^{\rm{s}}$ & $59^\circ\,47'\,12.30''$ & 0.12 & -9.437 & 17.720 & 1.070 & 3.55 \\
+	A13 & $2^{\rm{h}}\,38^{\rm{m}}\,47.9^{\rm{s}}$ & $59^\circ\,46'\,28.99''$ & 0.18 & -7.695 & 19.461 & 1.290 & 3.81 \\
+	A14 & $2^{\rm{h}}\,38^{\rm{m}}\,13.2^{\rm{s}}$ & $59^\circ\,46'\,22.37''$ & 0.20 & -7.492 & 19.665 & 0.958 & 3.35 \\
+	A15 & $2^{\rm{h}}\,38^{\rm{m}}\,50.4^{\rm{s}}$ & $59^\circ\,46'\,6.46''$ & 0.19 & -7.094 & 20.063 & 1.673 & 12.07 \\
 	\hline
 \end{tabular}
-\end{table*}
+\end{table}
 
 
-\begin{table*}
+\begin{table}
  \centering
   \caption{Photometry of the first ten ``Class B'' globular cluster candidates. Absolute magnitudes have been computed using $D = 2.7\,\rm{Mpc}$.}
 \label{tab:class_b}  
@@ -319,21 +354,29 @@ and AST-0909237.
 	\hline
 	ID & RA & DEC & $\epsilon$ & $M_{z'}$ & $m_{z'}$ & $r'-z'$ & King$_{30}$ FWHM (pc) \\
 	\hline
-	B1 & $39^\circ\,35'\,27.204''$ & $59^\circ\,54'\,6.984''$ & 0.07 & -8.051 & 19.106 & 1.652 & 1.50 \\
-	B2 & $39^\circ\,37'\,49.872''$ & $59^\circ\,53'\,26.376''$ & 0.22 & -7.342 & 19.814 & 2.212 & 1.24 \\
-	B3 & $39^\circ\,33'\,14.724''$ & $59^\circ\,53'\,23.316''$ & 0.13 & -5.830 & 21.327 & 2.030 & 0.95 \\
-	B4 & $39^\circ\,29'\,59.280''$ & $59^\circ\,53'\,6.648''$ & 0.23 & -5.134 & 22.022 & 1.921 & 8.14 \\
-	B5 & $39^\circ\,35'\,49.848''$ & $59^\circ\,52'\,56.424''$ & 0.08 & -5.157 & 22.000 & 2.821 & 1.91 \\
-	B6 & $39^\circ\,31'\,38.388''$ & $59^\circ\,52'\,39.648''$ & 0.10 & -4.878 & 22.279 & 2.101 & 6.32 \\
-	B7 & $39^\circ\,29'\,15.288''$ & $59^\circ\,52'\,25.788''$ & 0.19 & -5.080 & 22.077 & 2.187 & 3.35 \\
-	B8 & $39^\circ\,43'\,37.632''$ & $59^\circ\,51'\,57.060''$ & 0.18 & -7.197 & 19.960 & 2.477 & 4.42 \\
-	B9 & $39^\circ\,35'\,8.916''$ & $59^\circ\,51'\,57.312''$ & 0.02 & -6.022 & 21.135 & 3.428 & 1.33 \\
-	B10 & $39^\circ\,33'\,59.148''$ & $59^\circ\,51'\,36.432''$ & 0.05 & -11.998 & 15.159 & 0.863 & 1.41 \\
+	B1 & $2^{\rm{h}}\,38^{\rm{m}}\,21.8^{\rm{s}}$ & $59^\circ\,54'\,6.98''$ & 0.07 & -9.131 & 18.026 & 0.542 & 1.50 \\
+	B2 & $2^{\rm{h}}\,38^{\rm{m}}\,31.3^{\rm{s}}$ & $59^\circ\,53'\,26.38''$ & 0.22 & -8.419 & 18.738 & 1.104 & 1.24 \\
+	B3 & $2^{\rm{h}}\,38^{\rm{m}}\,13.0^{\rm{s}}$ & $59^\circ\,53'\,23.32''$ & 0.13 & -6.913 & 20.244 & 0.917 & 0.95 \\
+	B4 & $2^{\rm{h}}\,37^{\rm{m}}\,60.0^{\rm{s}}$ & $59^\circ\,53'\,6.65''$ & 0.23 & -6.219 & 20.938 & 0.806 & 8.14 \\
+	B5 & $2^{\rm{h}}\,38^{\rm{m}}\,23.3^{\rm{s}}$ & $59^\circ\,52'\,56.42''$ & 0.08 & -6.236 & 20.921 & 1.711 & 1.91 \\
+	B6 & $2^{\rm{h}}\,38^{\rm{m}}\,6.6^{\rm{s}}$ & $59^\circ\,52'\,39.65''$ & 0.10 & -5.960 & 21.197 & 0.989 & 6.32 \\
+	B7 & $2^{\rm{h}}\,37^{\rm{m}}\,57.0^{\rm{s}}$ & $59^\circ\,52'\,25.79''$ & 0.19 & -6.163 & 20.993 & 1.074 & 3.35 \\
+	B8 & $2^{\rm{h}}\,38^{\rm{m}}\,54.5^{\rm{s}}$ & $59^\circ\,51'\,57.06''$ & 0.18 & -8.274 & 18.882 & 1.369 & 4.42 \\
+	B9 & $2^{\rm{h}}\,38^{\rm{m}}\,20.6^{\rm{s}}$ & $59^\circ\,51'\,57.31''$ & 0.02 & -7.098 & 20.059 & 2.321 & 1.33 \\
+	B10 & $2^{\rm{h}}\,38^{\rm{m}}\,33.8^{\rm{s}}$ & $59^\circ\,50'\,17.84''$ & 0.20 & -6.527 & 20.629 & 2.443 & 1.39 \\
+	B11 & $2^{\rm{h}}\,38^{\rm{m}}\,45.9^{\rm{s}}$ & $59^\circ\,48'\,36.76''$ & 0.22 & -7.152 & 20.005 & 0.921 & 3.72 \\
+	B12 & $2^{\rm{h}}\,38^{\rm{m}}\,57.7^{\rm{s}}$ & $59^\circ\,48'\,33.88''$ & 0.12 & -6.630 & 20.527 & 2.544 & 1.47 \\
+	B13 & $2^{\rm{h}}\,38^{\rm{m}}\,39.6^{\rm{s}}$ & $59^\circ\,45'\,45.43''$ & 0.15 & -6.093 & 21.063 & 0.824 & 2.48 \\
+	B14 & $2^{\rm{h}}\,38^{\rm{m}}\,38.3^{\rm{s}}$ & $59^\circ\,44'\,16.26''$ & 0.05 & -6.608 & 20.548 & 1.524 & 2.74 \\
+	B15 & $2^{\rm{h}}\,38^{\rm{m}}\,42.5^{\rm{s}}$ & $59^\circ\,43'\,56.03''$ & 0.05 & -6.416 & 20.741 & 2.649 & 3.72 \\
 	\hline
 \end{tabular}
-\end{table*}
+\end{table}
 
-\bsp
+
+%\lipsum[1]
+
+%\bsp
 \label{lastpage}
 
 \end{document}

@@ -179,6 +179,7 @@ class SmartClassifier(object):
             cb.set_label(r"$\rm{Probability}$", fontsize=18)
             fig.savefig("classifier_%s.pdf"%self.name, bbox_inches="tight")
             np.save("classifier_%s.npy"%self.name, hRatio)
+            plt.show()
             
         
         
@@ -194,12 +195,12 @@ class SmartClassifier(object):
             fig = plt.figure(figsize=(8,8))
             ax0 = fig.add_subplot(1,1,1)
             ax0.scatter(catalog[tn][col0], catalog[tn][col1], label="Correct Point", c="k", lw=0, alpha=0.1)
-            ax0.scatter(catalog[tp][col0], catalog[tp][col1], label="Correct Extended", c="g", lw=0, s=30)
-            ax0.scatter(catalog[fn][col0], catalog[fn][col1], label="False negative", c="r", marker="+", lw=1, s=30)
-            ax0.scatter(catalog[fp][col0], catalog[fp][col1], label="False positive", c="m", lw=1, marker="x", s=20)
+            ax0.scatter(catalog[tp][col0], catalog[tp][col1], label="Correct Extended", c="g", lw=0, s=30, alpha=0.4)
+            ax0.scatter(catalog[fn][col0], catalog[fn][col1], label="False negative", c="r", marker="+", lw=1, s=30, alpha=0.4)
+            ax0.scatter(catalog[fp][col0], catalog[fp][col1], label="False positive", c="m", lw=1, marker="x", s=20, alpha=0.4)
             ax0.legend()
-            #ax0.set_xlabel("FALLOFF")
-            #ax0.set_ylabel("CLASS_STAR")
+            ax0.set_xlabel("FALLOFF")
+            ax0.set_ylabel("CLASS_STAR")
             ax0.set_title(label)
             plt.show()
             
