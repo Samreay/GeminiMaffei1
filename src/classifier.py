@@ -11,20 +11,23 @@ from sklearn.ensemble import AdaBoostClassifier
 from sklearn.tree import DecisionTreeClassifier
 from numpy.lib.recfunctions import append_fields
 from sklearn.externals import joblib
-
+import hashlib
 from reducer import Reducer
 from smartClassifier import *
 
 class Classifier(Reducer):
-    def __init__(self, fitsFile, candidates, debug=True, debugPlot=False, tempParentDir=None):
-        self.fitsFile = fitsFile
-        self.candidates = candidates
+    def __init__(self, fitsFolder, debug=True, debugPlot=False, tempParentDir=None):
+        self.fitsFolder = fitsFolder
+        self.fitsPath = fitsFolder
         self.classifier = None
+        self.candidateMask = {}
+        self.mainCatalog = {}
         super(Classifier, self).__init__(debug=debug, debugPlot=debugPlot, tempParentDir=tempParentDir, tempSubDir="classifier")
        
         
     def getClassifiers(self):
-        
+        if not os.path.exists(self.outDir):
+            os.mkdir(self.outDir)
         outDir = self.outDir + os.sep + "classPickle"
         if not os.path.exists(outDir):
             os.mkdir(outDir)
@@ -36,12 +39,16 @@ class Classifier(Reducer):
 
         if not (class1Exists and class2Exists):
             self._setupTempDir()
-            self.mainCatalog = self.getCatalog(self.fitsFile, ishape=True)
-            self.candidateMask = self._getCandidateMask(self.mainCatalog, np.loadtxt(self.candidates))
-            self.mainCatalog = append_fields(self.mainCatalog, 'WEIGHT', self.candidateMask * 1.0, usemask=False)    
-            self.mainCatalog = append_fields(self.mainCatalog, 'EXTENDED', self.candidateMask, usemask=False)    
-            self.mainCatalog = append_fields(self.mainCatalog, 'HLR', np.zeros(self.mainCatalog.shape), usemask=False)    
-            self.mainCatalog = append_fields(self.mainCatalog, 'MAG', np.zeros(self.mainCatalog.shape), usemask=False)
+            self.fitsFiles = [f[:-5] for f in os.listdir(self.fitsFolder) if ".fits" in f]
+            self.fitsFilesLoc = [os.path.abspath(self.fitsFolder + os.sep + f) for f in os.listdir(self.fitsFolder) if ".fits" in f]
+            
+            for f in self.fitsFiles:
+                self.mainCatalog[f] = self.getCatalog(self.fitsFolder + os.sep + f + ".fits", ishape=True)
+                self.candidateMask[f] = self._getCandidateMask(self.mainCatalog[f], np.loadtxt(self.fitsFolder + os.sep + f + ".txt"))
+                self.mainCatalog[f] = append_fields(self.mainCatalog[f], 'WEIGHT', self.candidateMask[f] * 1.0, usemask=False)    
+                self.mainCatalog[f] = append_fields(self.mainCatalog[f], 'EXTENDED', self.candidateMask[f], usemask=False)    
+                self.mainCatalog[f] = append_fields(self.mainCatalog[f], 'HLR', np.zeros(self.mainCatalog[f].shape), usemask=False)    
+                self.mainCatalog[f] = append_fields(self.mainCatalog[f], 'MAG', np.zeros(self.mainCatalog[f].shape), usemask=False)
             self._trainClassifier()
             joblib.dump(self.sc, class1Save) 
             joblib.dump(self.sc2, class2Save) 
@@ -57,20 +64,20 @@ class Classifier(Reducer):
 
         
         
-    def _getArtificial(self, i):
+    def _getArtificial(self, fitsFile, f, i):
         self._debug("Generating artifical populations for training")
-        tempDir = self.tempDir + os.sep + "artificial"
-        outDir = self.outDir + os.sep + "artificial"
+        print("A", fitsFile)
+        tempDir = self.tempDir + os.sep + "artificial_%s"%f
+        outDir = self.outDir + os.sep + "artificial_%s"%f
         if not os.path.exists(tempDir):
             os.mkdir(tempDir)
         if not os.path.exists(outDir):
             os.mkdir(outDir)
-        psfs = self.getPSFs(self.fitsFile, self.mainCatalog)
-        image = fits.getdata(self.fitsFile)
+        psfs = self.getPSFs(fitsFile, self.mainCatalog[f])
+        image = fits.getdata(fitsFile)
         
-        kingPSFs = [self._generateKingPSF(tempDir, outDir, psf,i) for psf in psfs]
+        kingPSFs = [self._generateKingPSF(tempDir, outDir, psf,int(int(hashlib.md5(f).hexdigest(), 16) % 1e3)+i) for psf in psfs]
 
-            
         return self._getArtificialImage(i, tempDir, outDir, psfs, kingPSFs, image)
             
         
@@ -92,9 +99,10 @@ class Classifier(Reducer):
         yy = image.shape[0]/len(psfs)
         if (yy % 2 == 0):
             ys = [yy,yy]
-        else:
+        elif image.shape[0] % 2 == 1:
             ys = [yy, yy+1]
-        
+        else:
+            ys = [yy,yy]
         
         starList = None
         extendedList = None
@@ -214,14 +222,21 @@ class Classifier(Reducer):
             kings.append((parsecs[i], kingPSF))
         return kings
 
-    def getCatAndCandFromImage(self, tempDir, index, ishape=True):
-        fitsFile = tempDir + os.sep + "artificalAdded%d.fits"%index
-        stars, extendeds, image = self._getArtificial(index)
-        hdulist = fits.open(self.fitsFile)
+    def getCatAndCandFromImage(self, f,loc, tempDir, index, ishape=True):
+        dirr = tempDir + os.sep + f
+        if not os.path.exists(dirr):
+            os.mkdir(dirr)
+        fitsFile = dirr + os.sep + "%s_artificalAdded%d.fits"%(f,index)
+        print("B", fitsFile)
+        stars, extendeds, image = self._getArtificial(loc, f, index)
+        hdulist = fits.open(loc)
+        print(hdulist[0].data.shape)
+        print(image.shape)
         hdulist[0].data += image
+        hdulist[0].data = hdulist[0].data.astype(np.float32)
         hdulist.writeto(fitsFile, clobber=True)
         hdulist.close()
-        catalogTemp = self.getCatalog(fitsFile, ishape=ishape, excluded=self.mainCatalog)
+        catalogTemp = self.getCatalog(fitsFile, ishape=ishape, excluded=self.mainCatalog[f])
         hlr = []
         mags = []
         ext = []
@@ -255,15 +270,17 @@ class Classifier(Reducer):
         if not os.path.exists(tempDir):
             os.mkdir(tempDir)
         
-        catalog = self.mainCatalog.copy()
+        catalog = np.concatenate(self.mainCatalog.values())
         exts = None
         for i in range(numImages):
-            cat, ext = self.getCatAndCandFromImage(tempDir, i, ishape=ishape)
-            catalog = np.concatenate((catalog, cat))
-            if exts is None:
-                exts = ext
-            else:
-                exts = np.vstack((exts, ext))
+            for fitsFile, fitsFileLoc in zip(self.fitsFiles, self.fitsFilesLoc):
+                print(fitsFile)
+                cat, ext = self.getCatAndCandFromImage(fitsFile, fitsFileLoc, tempDir, i, ishape=ishape)
+                catalog = np.concatenate((catalog, cat))
+                if exts is None:
+                    exts = ext
+                else:
+                    exts = np.vstack((exts, ext))
         self._debug("Saving catalog to %s"%outFile1)
         np.save(outFile1, catalog)
         np.save(outFile2, exts)
@@ -273,7 +290,7 @@ class Classifier(Reducer):
         
     def _trainClassifier(self, ishape=True):
         
-        catalog, extendeds = self._getTrainingData(numImages=300, ishape=ishape)
+        catalog, extendeds = self._getTrainingData(numImages=1, ishape=ishape)
         self.catalog1 = catalog
         self._debug("Have data for %d extendeds out of %d objects (%0.2f%%)" % (catalog['EXTENDED'].sum(), catalog.shape[0], 100.0*catalog['EXTENDED'].sum()/catalog.shape[0]))
         y = 'EXTENDED'

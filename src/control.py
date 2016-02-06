@@ -12,10 +12,10 @@ tileDir = "../resources/tiles"
 mosaicDir = "../resources/mosaic"
 view = r"/Users/shinton/Documents/backup/GeminiMaffei1/resources/mosaicZSub.fits"
 
-'''
-classifier = Classifier("../resources/classified/candidates.fits", "../resources/classified/candidates.txt", tempParentDir=tempParentDir, debugPlot=True)
-classifier.getClassifiers()
 
+classifier = Classifier("../resources/classified", tempParentDir=tempParentDir, debugPlot=True)
+classifier.getClassifiers()
+'''
 
 tiles = [Tile(os.path.abspath(tileDir + os.sep + f), classifier, tempParentDir=tempParentDir) for f in os.listdir(tileDir) if os.path.isfile(tileDir + os.sep + f) and f.endswith(".fits")]
 
@@ -98,8 +98,8 @@ gccf = addFWHM(gccf)
 
 '''
 
-g = getDists(gccf)
-plotDist(g)
+#g = getDists(gccf)
+#plotDist(g)
 
 
 '''
@@ -110,14 +110,14 @@ for c in colors:
 plotSizeDiagrams(g)    
 '''
 
-classA = g['Chi2DeltaKingDiv'] > 1.5
+'''classA = g['Chi2DeltaKingDiv'] > 1.5
 classB = ~classA
 
 np.savetxt("classA.txt",g[classA][['RA','DEC']])
 np.savetxt("classB.txt",g[classB][['RA','DEC']])
 
 print(classA.sum())
-print(classB.sum())
+print(classB.sum())'''
 
 
 '''
