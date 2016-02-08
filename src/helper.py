@@ -327,6 +327,7 @@ def plotColourDiagrams(cat, colourColumn='Chi2DeltaKingDiv', label=r"$\chi^2_{\r
     vmin = cat[zmask | imask | rmask][colourColumn].min()
     vmax = cat[zmask | imask | rmask][colourColumn].max()
     vmax = 3    
+    vmin = 1
     
     h1 = axes[0].scatter(i[zmask & imask] - z[zmask & imask], mag[zmask & imask], c=cat[zmask & imask][colourColumn], vmin=vmin, vmax=vmax, edgecolor="none", cmap=cmap)
     h2 = axes[1].scatter(r[rmask & imask] - i[rmask & imask], mag[rmask & imask], c=cat[rmask & imask][colourColumn], vmin=vmin, vmax=vmax, edgecolor="none", cmap=cmap)

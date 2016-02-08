@@ -453,7 +453,7 @@ class Reducer(object):
             self.addColourBars([(im0, ax0), (im1, ax1)])
             plt.show()
             
-        hdulist = fits.PrimaryHDU(filterImage)
+        hdulist = fits.PrimaryHDU(filterImage.astype(np.float32))
         hdulist.writeto(outputName, clobber=True)
         self._debug("Background fits file generated and saved to %s" % outputName)
         return originalImage - filterImage

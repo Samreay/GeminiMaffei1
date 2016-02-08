@@ -47,40 +47,37 @@ class SmartClassifier(object):
             
         
         
-    def learn(self):
-        self.classifier = self.getBestClassifier()
+    def learn(self,highPrecision=True):
+        self.classifier = self.getBestClassifier(highPrecision=highPrecision)
         return self.classifier
     
-    def evaluate(self, classifier, catalog, highPrecision=False):
+    def evaluate(self, classifier, catalog):
         x,y,w = self.getXYW(catalog)
         z = classifier.predict(x)
         tn = ((z == 0) & (y == 0)).sum()
         tp = ((z == 1) & (y == 1)).sum()
         fp = ((z == 1) & (y == 0)).sum()
         fn = ((z == 0) & (y == 1)).sum()
+
+        numerator = (tp * tn) - (fp * fn)
+        demoninator = np.sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn))
+        if demoninator == 0.0:
+            demoninator = 1.0
+        mcc = numerator / demoninator
         
-        if highPrecision:
-            val = tp / (tp + fn + 0.01) + 2.5 * (tn / (fp + tn + 0.01))
-            return val
-        else:
-        
-            numerator = (tp * tn) - (fp * fn)
-            demoninator = np.sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn))
-            if demoninator == 0.0:
-                demoninator = 1.0
-            mcc = numerator / demoninator
-            
-            return mcc
-    
+        return mcc
+
     def getXYW(self, catalog):
         x = catalog[self.columns].view(np.float64).reshape(catalog.shape + (-1,))
         y = catalog[self.y]
         w = catalog["WEIGHT"]
         return x,y,w
         
-    def getBestClassifier(self, highPrecision=False):
+    def getBestClassifier(self, highPrecision=True):
         boosts = [1,2,5,10]#,15,20]#,30]#,40]#60,100]#,40,50,70]
-        weights = [1,2,3,4]#,6,8]#,8,10,12,16]#,64]#,128]#,12,16,24,32]
+        weights = [5,6,7]#,6,8]#,8,10,12,16]#,64]#,128]#,12,16,24,32]
+        if highPrecision:
+            weights = [1,2,3]
         maxDepth = 3
         classifiers = []
         evals = []
@@ -103,11 +100,11 @@ class SmartClassifier(object):
                 for w in weights:
                     x,y,weight = self.getXYW(train)
                     sw = np.min(np.vstack((train['HLR']/6.0, np.ones(train.shape))), axis=0)**2
-                    weight = 1.0*(1-y)+(w-1)*y*sw + 100.0*weight
+                    weight = 1.0*(1-y)+(w-1)*y*sw + 200.0*weight
                     classifier = AdaBoostClassifier(DecisionTreeClassifier(max_depth=i), algorithm="SAMME", n_estimators=boost)
                     classifiers.append(classifier)
                     classifier.fit(x,y, sample_weight=weight)
-                    evaluated = self.evaluate(classifier, validate, highPrecision=highPrecision)
+                    evaluated = self.evaluate(classifier, validate)
                     evals.append(evaluated)
                     label = "BDT,  D=%d,  B=%2d,  W=%2d,  MCC=%0.4f" % (i,boost,w, evaluated)
                     print(label)

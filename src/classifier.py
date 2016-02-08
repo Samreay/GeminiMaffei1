@@ -97,12 +97,11 @@ class Classifier(Reducer):
         
         x = image.shape[1]
         yy = image.shape[0]/len(psfs)
-        if (yy % 2 == 0):
+        if image.shape[0] % 2 == 0:
             ys = [yy,yy]
-        elif image.shape[0] % 2 == 1:
-            ys = [yy, yy+1]
         else:
-            ys = [yy,yy]
+            ys = [yy, yy+1]
+
         
         starList = None
         extendedList = None
@@ -230,6 +229,7 @@ class Classifier(Reducer):
         print("B", fitsFile)
         stars, extendeds, image = self._getArtificial(loc, f, index)
         hdulist = fits.open(loc)
+        print(f)
         print(hdulist[0].data.shape)
         print(image.shape)
         hdulist[0].data += image
@@ -290,7 +290,7 @@ class Classifier(Reducer):
         
     def _trainClassifier(self, ishape=True):
         
-        catalog, extendeds = self._getTrainingData(numImages=1, ishape=ishape)
+        catalog, extendeds = self._getTrainingData(numImages=50, ishape=ishape)
         self.catalog1 = catalog
         self._debug("Have data for %d extendeds out of %d objects (%0.2f%%)" % (catalog['EXTENDED'].sum(), catalog.shape[0], 100.0*catalog['EXTENDED'].sum()/catalog.shape[0]))
         y = 'EXTENDED'
@@ -300,7 +300,7 @@ class Classifier(Reducer):
 
         # Create and fit an AdaBoosted decision tree
         self.sc = SmartClassifier("1",catalog,y,extendeds,remove=['NUMBER','X_IMAGE','Y_IMAGE','WEIGHT','HLR','MAG','Chi2DeltaKingDiv','Chi2DeltaKingSub','Chi2King','Chi2Delta','KingFWHM'])
-        self.classifier = self.sc.learn()
+        self.classifier = self.sc.learn(highPrecision=False)
         #bdt = AdaBoostClassifier(DecisionTreeClassifier(max_depth=2), algorithm="SAMME", n_estimators=strength)
         #bdt.fit(X, y, sample_weight=1+40*y)
         self._debug("Classifier created")
