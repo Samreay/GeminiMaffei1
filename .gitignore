@@ -10,7 +10,7 @@ __pycache__/
 *.blg
 *.out
 *.synctex.gz
-
+*.fits
 # C extensions
 *.so
 out/

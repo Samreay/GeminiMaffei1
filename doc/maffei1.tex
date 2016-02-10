@@ -203,16 +203,16 @@ due to the number of sources, a machine learning approach was adopted in order
 to differentiate between stellar sources and extended sources. Initially, the neural network
 classifier contained inside \textsc{SExtractor} was utilised, but a posterior analysis has shown that clearly resolved sources have been assigned a \verb+CLASS_STAR+ parameter value as high
 as 0.98, which on a blind approach would have been classified as
-stars. Thus the algorithm was found to be insufficient ,and a new algorithm was developed. Training of the machine learning algorithms was performed by combining artificially generated data and manual classification on a single tile.
+stars. Thus the algorithm was found to be insufficient ,and a new algorithm was developed. Training of the machine learning algorithms was performed by combining artificially generated data and manual classification of \textsc{SUPRIMECAM} tiles.
 
-Manual classification was performed by visual analysis of the star-subtracted $z'$-image of the chosen CCD tile produced by the psf-fitting algorithm in
-\textsc{allstar}. The image was were visually inspected to look for residuals that
+Manual classification was performed by visual analysis of the star-subtracted $z'$-image of the CCD tiles produced by the psf-fitting algorithm in
+\textsc{allstar}. The images was were visually inspected to look for residuals that
 revealed the presence of extended sources. The light profile of GCs
 (but also galaxies) would be over-subtracted in the central parts and
 under-subtracted in the wings, leaving an easily recognizable
 ``ring-shaped'' residual (see Fig. \ref{fig:subtraction}). A visual
 inspection of the residuals in a tile is a
-painstaking process, but provides benefit over only artificial data that does not model the full distribution of extendeds' properties accurately. Our selected approach revealed the presence of 77 extended sources in the Clarisse tile.
+painstaking process, but provides benefit over only artificial data that does not model the full distribution of extendeds' properties accurately. 
 
 \begin{figure}
 	\includegraphics[width=0.49\textwidth]{images/Subtracted.jpg}
@@ -225,11 +225,18 @@ painstaking process, but provides benefit over only artificial data that does no
 
 
 
-Artificial stars and extended sources were added to the Clarisse tile by the use of the \verb|mksynth| task in \textsc{BAOlab} \citep{Larsen1999}. The psf input into the \verb|mksynth| function was determined using by automatically selecting a number of candidate psf stars (based on flux criterion, star classification and source isolation), and generating a subsampled psf using the \verb|digiphot| package in \textsc{iraf} {\color{red} CITE}. For generation of artificial extended objects, the \verb|mkcmppsf| task was also used to generate a compositie psf with a King model \citep{King1962} with concentration index of 30. The fwhm of the model was randomised to allow variation in the size of the artificial globular clusters. Both stars and extendeds were generated with uniform randomised magnitudes. The input data set was then created by using \textsc{SExtractor} to detect source properties of both the artificial sources and manually classified sources. In total, over $17\,000$ artifical globular cluster candidates and $170\,000$ artificial stars were introduced over a series of 300 artificial images to create a large set of data. The weighting of the manually detected stars and extended objects from the original tile was increased by a factor of a hundred to reflect their realism over artificial sources.
+Artificial stars and extended sources were added to the same visual inspection tiles by the use of the \verb|mksynth| task in \textsc{BAOlab} \citep{Larsen1999}. The psf input into the \verb|mksynth| function was determined using by automatically selecting a number of candidate psf stars (based on flux criterion, star classification and source isolation), and generating a subsampled psf using the \verb|digiphot| package in \textsc{iraf} {\color{red} CITE}. For the generation of artificial extended objects, the \verb|mkcmppsf| task was  used to generate a compositie psf with a King model \citep{King1962} with concentration index of 30. The fwhm of the model was randomised to allow variation in the size of the artificial globular clusters. Both stars and extendeds were generated with uniform randomised magnitudes. The aritifical stars, uniformly distributed over the tiles, were added on top of the original data, to create an artifical tile ready for analysis. The analysis tiles were then background subtracted, and \textsc{SExtractor} used to detect source properties of both the artificial sources and manually classified sources. In total, over $30\,000$ artifical globular cluster candidates and $300\,000$ artificial stars were introduced over a series of 500 artificial images to create a large set of data. The weighting of the manually detected stars and extended objects from the original tile was increased to reflect their realism over artificial sources.
 
 The input data was split into training, testing and validation sets, using ratios 0.4, 0.35 and 0.25 respectively, where multiple machine learning algorithms were trained on the training data, and the algorithm with the highest Matthews correlation coefficient\citep{matthews1975comparison} when evaluated on the validation set was selected as the final algorithm. The Matthews correlation coefficient was chosen to be maximised over other coefficients such as classifier accuracy, due to its fairness in dealing with unbalanced classes \citep{Baldi2000, Jurman2012}, which we expect to find with the number of point sources far exceeding the number of extended sources. Expected performance of the algorithm was determined by fitting to the test data set, and the probability of correctly classifying an extended object as a function of half light radius and magnitude is shown in Figure \ref{fig:comp1}.
 
-The extended candidates for each tile given by the initial machine learning algorithm were then processed through the task \verb|iShape|, a procedure in the \textsc{BAOlab} software package, to gather more information on the candidates. This step is done seperately as computational constraints hinder the ability to run \verb|iShape| on all detected sources, and so an initial candidate round must be selected. Information on $\chi^2$ of the King fit, $\chi^2$ of the delta model fit, and the fwhm of the King profile are added to the original data set. The manually selected candidates and artificially generated sources were also processed by \verb|iShape|, and the improved dataset was used to train a second classifier in a similar fashion to the first, which was designed to remove many of the false positives from the initial classifier and improve accuray on only partially resolved globular cluster candidates. The probability of detecting a source as a globular cluster correctly, as a function of half light radius $r_h$ and magnitude for the new classifier is shown in Figure \ref{fig:comp2}. It important to note that the success rates shown in Figure \ref{fig:comp2} cannot be directly applied to the real data and thus only provide estaimtes due to the presence of additional selection cuts after attaining classification results. The matching accuracy on other tiles is expected to be lower due to artificial modelling not reflecting all the variations and subtleties of real global clusters and the lack of modelling other sources, such as compact dwarfs, stanard galaxies and other astronomical phenomenon outside stars and globular clusters. In order to reduce the number of false positives given by the second classifier and select only primary candidates, several important selection cuts were put in place. The primary four cuts consisted of an absolute magnitude cut to remove sources brighter than $M_{z'} = -11$, a $\chi^2_{\rm{Delta}}/\chi^2_{\rm{King30}} >1$ cut to remove objects better modelled as point sources, a King30 fhwm exceeding 2pc (which corresponds to at least half a pixel resolution of the object) and a colour profile cut. The colour profile cut removes extended objects which have highly varying colour over their radial profile, to remove some of the galaxy's classified as globular clusters. The cut was calculated by determining the median deviation in the colour profile of the PSF stars, and removing all extended obejcts that varied by more than five times this value.
+The extended candidates for each tile given by the initial machine learning algorithm were then processed through the task \verb|iShape|, a procedure in the \textsc{BAOlab} software package, to gather more information on the candidates. This step is done seperately as computational constraints hinder the ability to run \verb|iShape| on all detected sources, and so an initial candidate round must be selected. Information on $\chi^2$ of the King fit, $\chi^2$ of the delta model fit, and the fwhm of the King profile are added to the original data set. The manually selected candidates and artificially generated sources were also processed by \verb|iShape|, and the improved dataset was used to train a second classifier in a similar fashion to the first, which was designed to remove many of the false positives from the initial classifier and improve accuray on only partially resolved globular cluster candidates. The probability of detecting a source as a globular cluster correctly, as a function of half light radius $r_h$ and magnitude for the new classifier is shown in Figure \ref{fig:comp2}. It important to note that the success rates shown in Figure \ref{fig:comp2} cannot be directly applied to the real data and thus only provide estaimtes due to the presence of additional selection cuts after attaining classification results. The matching accuracy on other tiles is expected to be lower due to artificial modelling not reflecting all the variations and subtleties of real global clusters and the lack of modelling other sources, such as compact dwarfs, stanard galaxies and other astronomical phenomenon outside stars and globular clusters.\\
+
+Each candidate underwent aperture photometry on the fully reduced mosaics mentioned in Section \ref{sec:obs}, where colour magnitude corrections were performed by interpolating the dust maps from \citet{Schlegel1998} and applying the band extinction to redding ratios from \citet{Schlafly2011}. Magnitude calibration was performed by using the Landolt set of standard stars \citep{Landolt1992} that had been transformed via the equations given in \citet{Fukugita1996} into the SDSS system. Zero point magnitude calibrations were determined using the \verb|fitparams| task in \textsc{iraf}.
+
+
+
+
+In order to reduce the number of false positives given by the second classifier and select only primary candidates, several important selection cuts were put in place. An absolute magnitude cut was implemented to remove sources brighter than $M_{z'} = -12$, and a $\chi^2_{\rm{Delta}}/\chi^2_{\rm{King30}} >1$ cut removes objects better modelled as point sources. Objects with a King30 fhwm under 2pc (which corresponds to approximately half a pixel resolution of the object) or over 15pc  {\color{red} CITE}, where distances calculated using the distance of Maffei 1 to be 2.7Mpc, were excluded from the sample. Objects with high ellipticity, such that $\epsilon > 0.25$ were removed in an effort to lower misidentified galaxies {\color{red} CITE}. Finally, a colour profile cut was introduced,to remove extended objects which have highly varying colour over their radial profile, to remove some of the galaxy's classified as globular clusters. The cut was calculated by determining the median deviation in the colour profile of the PSF stars, and removing all extended objects that varied by more than five times this value. These cuts reduced the original catalog of 1159 candidate objects output by the machine learning algorithm to 720 candidates.
 
 \begin{figure*}
 	\centering
@@ -260,9 +267,8 @@ The extended candidates for each tile given by the initial machine learning algo
 
 
 
-Each candidate underwent aperture photometry on the fully reduced mosaics mentioned in Section \ref{sec:obs}, where colour magnitude corrections were performed by interpolating the dust maps from \citet{Schlegel1998} and applying the band extinction to redding ratios from \citet{Schlafly2011}. Magnitude calibration was performed by using the Landolt set of standard stars \citep{Landolt1992} that had been transformed via the equations given in \citet{Fukugita1996} into the SDSS system. Zero point magnitude calibrations were determined using the \verb|fitparams| task in \textsc{iraf}.
 
-Further pruning of the globular cluster candidates was performed removing unphysical outliers in the analysis, such as removing objects with a detected fwhm of over a ten arcseconds. In addition, ellipticity cutoffs, colour profile cuts and magnitude cuts were introduced to remove galaxies in the globular cluster candidate list. 
+
 
 
 \subsection{Globular clusters color-magnitude diagram}
@@ -320,27 +326,27 @@ and AST-0909237.
 
 \begin{table}
  \centering
- \caption{Photometry of the first ten ``Class A'' (see main text for its definition) globular cluster candidates. Absolute magnitudes have been computed using $D = 2.7\,\rm{Mpc}$.}
+ \caption{Photometry of the first fifteen ``Class A'' (see main text for its definition) globular cluster candidates. Absolute magnitudes have been computed using $D = 2.7\,\rm{Mpc}$.}
 \label{tab:class_a}  
 \begin{tabular}{lllccccc}
 	\hline
 	ID & RA & DEC & $\epsilon$ & $M_{z'}$ & $m_{z'}$ & $r'-z'$ & King$_{30}$ FWHM (pc) \\
 	\hline
-	A1 & $2^{\rm{h}}\,38^{\rm{m}}\,35.3^{\rm{s}}$ & $59^\circ\,53'\,40.45''$ & 0.14 & -8.604 & 18.552 & 0.878 & 2.05 \\
-	A2 & $2^{\rm{h}}\,38^{\rm{m}}\,8.8^{\rm{s}}$ & $59^\circ\,52'\,29.39''$ & 0.10 & -7.399 & 19.757 & 1.473 & 4.88 \\
-	A3 & $2^{\rm{h}}\,38^{\rm{m}}\,54.9^{\rm{s}}$ & $59^\circ\,52'\,15.67''$ & 0.22 & -9.129 & 18.028 & 1.198 & 2.80 \\
-	A4 & $2^{\rm{h}}\,38^{\rm{m}}\,12.9^{\rm{s}}$ & $59^\circ\,52'\,0.73''$ & 0.07 & -8.487 & 18.670 & 1.363 & 7.04 \\
-	A5 & $2^{\rm{h}}\,37^{\rm{m}}\,56.5^{\rm{s}}$ & $59^\circ\,51'\,57.60''$ & 0.25 & -8.708 & 18.449 & 1.410 & 4.10 \\
-	A6 & $2^{\rm{h}}\,38^{\rm{m}}\,36.6^{\rm{s}}$ & $59^\circ\,51'\,36.72''$ & 0.17 & -7.123 & 20.033 & 1.004 & 3.64 \\
-	A7 & $2^{\rm{h}}\,38^{\rm{m}}\,10.6^{\rm{s}}$ & $59^\circ\,50'\,18.02''$ & 0.20 & -7.194 & 19.963 & 1.281 & 3.84 \\
-	A8 & $2^{\rm{h}}\,38^{\rm{m}}\,10.7^{\rm{s}}$ & $59^\circ\,50'\,1.18''$ & 0.24 & -8.158 & 18.999 & 1.413 & 6.64 \\
-	A9 & $2^{\rm{h}}\,38^{\rm{m}}\,59.8^{\rm{s}}$ & $59^\circ\,49'\,49.22''$ & 0.24 & -7.544 & 19.613 & 0.985 & 2.71 \\
-	A10 & $2^{\rm{h}}\,38^{\rm{m}}\,37.2^{\rm{s}}$ & $59^\circ\,49'\,41.20''$ & 0.10 & -7.116 & 20.041 & 1.513 & 5.48 \\
-	A11 & $2^{\rm{h}}\,38^{\rm{m}}\,37.0^{\rm{s}}$ & $59^\circ\,49'\,37.06''$ & 0.16 & -6.685 & 20.471 & 1.459 & 10.54 \\
-	A12 & $2^{\rm{h}}\,38^{\rm{m}}\,27.5^{\rm{s}}$ & $59^\circ\,49'\,23.63''$ & 0.17 & -8.271 & 18.886 & 1.115 & 11.32 \\
-	A13 & $2^{\rm{h}}\,38^{\rm{m}}\,49.2^{\rm{s}}$ & $59^\circ\,48'\,49.93''$ & 0.11 & -8.477 & 18.680 & 0.920 & 9.81 \\
-	A14 & $2^{\rm{h}}\,38^{\rm{m}}\,43.5^{\rm{s}}$ & $59^\circ\,48'\,17.57''$ & 0.18 & -7.249 & 19.908 & 1.413 & 4.85 \\
-	A15 & $2^{\rm{h}}\,38^{\rm{m}}\,38.6^{\rm{s}}$ & $59^\circ\,47'\,33.18''$ & 0.20 & -7.096 & 20.061 & 2.325 & 2.19 \\
+	A1 & $2^{\rm{h}}\,38^{\rm{m}}\,21.5^{\rm{s}}$ & $59^\circ\,53'\,56.29''$ & 0.08 & -8.129 & 19.028 & 0.787 & 1.53 \\
+	A2 & $2^{\rm{h}}\,38^{\rm{m}}\,35.3^{\rm{s}}$ & $59^\circ\,53'\,40.45''$ & 0.14 & -8.592 & 18.565 & 0.878 & 2.05 \\
+	A3 & $2^{\rm{h}}\,38^{\rm{m}}\,8.8^{\rm{s}}$ & $59^\circ\,52'\,29.39''$ & 0.10 & -7.489 & 19.668 & 1.473 & 4.88 \\
+	A4 & $2^{\rm{h}}\,38^{\rm{m}}\,54.9^{\rm{s}}$ & $59^\circ\,52'\,15.67''$ & 0.22 & -9.047 & 18.109 & 1.198 & 2.80 \\
+	A5 & $2^{\rm{h}}\,38^{\rm{m}}\,12.9^{\rm{s}}$ & $59^\circ\,52'\,0.73''$ & 0.07 & -8.566 & 18.591 & 1.363 & 7.04 \\
+	A6 & $2^{\rm{h}}\,37^{\rm{m}}\,56.5^{\rm{s}}$ & $59^\circ\,51'\,57.60''$ & 0.25 & -8.745 & 18.412 & 1.410 & 4.10 \\
+	A7 & $2^{\rm{h}}\,38^{\rm{m}}\,36.6^{\rm{s}}$ & $59^\circ\,51'\,36.72''$ & 0.17 & -7.304 & 19.853 & 1.004 & 3.64 \\
+	A8 & $2^{\rm{h}}\,38^{\rm{m}}\,10.6^{\rm{s}}$ & $59^\circ\,50'\,18.02''$ & 0.20 & -7.064 & 20.093 & 1.281 & 3.84 \\
+	A9 & $2^{\rm{h}}\,38^{\rm{m}}\,10.7^{\rm{s}}$ & $59^\circ\,50'\,1.18''$ & 0.24 & -8.162 & 18.995 & 1.413 & 6.64 \\
+	A10 & $2^{\rm{h}}\,38^{\rm{m}}\,59.8^{\rm{s}}$ & $59^\circ\,49'\,49.22''$ & 0.24 & -7.652 & 19.504 & 0.985 & 2.71 \\
+	A11 & $2^{\rm{h}}\,38^{\rm{m}}\,37.2^{\rm{s}}$ & $59^\circ\,49'\,41.20''$ & 0.10 & -7.124 & 20.032 & 1.513 & 5.48 \\
+	A12 & $2^{\rm{h}}\,38^{\rm{m}}\,37.0^{\rm{s}}$ & $59^\circ\,49'\,37.06''$ & 0.16 & -6.805 & 20.352 & 1.459 & 10.54 \\
+	A13 & $2^{\rm{h}}\,38^{\rm{m}}\,27.5^{\rm{s}}$ & $59^\circ\,49'\,23.63''$ & 0.17 & -8.384 & 18.773 & 1.115 & 11.32 \\
+	A14 & $2^{\rm{h}}\,38^{\rm{m}}\,49.2^{\rm{s}}$ & $59^\circ\,48'\,49.93''$ & 0.11 & -8.415 & 18.742 & 0.920 & 9.81 \\
+	A15 & $2^{\rm{h}}\,38^{\rm{m}}\,43.5^{\rm{s}}$ & $59^\circ\,48'\,17.57''$ & 0.18 & -7.152 & 20.005 & 1.413 & 4.85 \\
 	\hline
 \end{tabular}
 \end{table}
@@ -348,27 +354,27 @@ and AST-0909237.
 
 \begin{table}
  \centering
-  \caption{Photometry of the first ten ``Class B'' globular cluster candidates. Absolute magnitudes have been computed using $D = 2.7\,\rm{Mpc}$.}
+  \caption{Photometry of the first fifteen ``Class B'' globular cluster candidates. Absolute magnitudes have been computed using $D = 2.7\,\rm{Mpc}$.}
 \label{tab:class_b}  
 \begin{tabular}{lllccccc}
 	\hline
 	ID & RA & DEC & $\epsilon$ & $M_{z'}$ & $m_{z'}$ & $r'-z'$ & King$_{30}$ FWHM (pc) \\
 	\hline
-	B1 & $2^{\rm{h}}\,38^{\rm{m}}\,9.8^{\rm{s}}$ & $59^\circ\,53'\,53.52''$ & 0.18 & -6.725 & 20.432 & 2.455 & 2.57 \\
-	B2 & $2^{\rm{h}}\,37^{\rm{m}}\,60.0^{\rm{s}}$ & $59^\circ\,53'\,6.65''$ & 0.23 & -6.219 & 20.938 & 0.806 & 8.14 \\
-	B3 & $2^{\rm{h}}\,38^{\rm{m}}\,6.6^{\rm{s}}$ & $59^\circ\,52'\,39.65''$ & 0.10 & -5.960 & 21.197 & 0.989 & 6.32 \\
-	B4 & $2^{\rm{h}}\,37^{\rm{m}}\,57.0^{\rm{s}}$ & $59^\circ\,52'\,25.79''$ & 0.19 & -6.163 & 20.993 & 1.074 & 3.35 \\
-	B5 & $2^{\rm{h}}\,38^{\rm{m}}\,54.5^{\rm{s}}$ & $59^\circ\,51'\,57.06''$ & 0.18 & -8.274 & 18.882 & 1.369 & 4.42 \\
-	B6 & $2^{\rm{h}}\,38^{\rm{m}}\,44.6^{\rm{s}}$ & $59^\circ\,49'\,53.00''$ & 0.22 & -6.332 & 20.824 & 1.592 & 7.53 \\
-	B7 & $2^{\rm{h}}\,38^{\rm{m}}\,1.8^{\rm{s}}$ & $59^\circ\,48'\,45.25''$ & 0.07 & -6.263 & 20.894 & 1.318 & 2.14 \\
-	B8 & $2^{\rm{h}}\,38^{\rm{m}}\,45.9^{\rm{s}}$ & $59^\circ\,48'\,36.76''$ & 0.22 & -7.152 & 20.005 & 0.921 & 3.72 \\
-	B9 & $2^{\rm{h}}\,37^{\rm{m}}\,58.1^{\rm{s}}$ & $59^\circ\,48'\,0.68''$ & 0.21 & -5.775 & 21.382 & 1.002 & 3.00 \\
-	B10 & $2^{\rm{h}}\,38^{\rm{m}}\,39.6^{\rm{s}}$ & $59^\circ\,45'\,45.43''$ & 0.15 & -6.093 & 21.063 & 0.824 & 2.48 \\
-	B11 & $2^{\rm{h}}\,38^{\rm{m}}\,35.2^{\rm{s}}$ & $59^\circ\,44'\,39.98''$ & 0.15 & -5.852 & 21.305 & 1.565 & 2.25 \\
-	B12 & $2^{\rm{h}}\,38^{\rm{m}}\,38.3^{\rm{s}}$ & $59^\circ\,44'\,16.26''$ & 0.05 & -6.608 & 20.548 & 1.524 & 2.74 \\
-	B13 & $2^{\rm{h}}\,38^{\rm{m}}\,42.5^{\rm{s}}$ & $59^\circ\,43'\,56.03''$ & 0.05 & -6.416 & 20.741 & 2.649 & 3.72 \\
-	B14 & $2^{\rm{h}}\,38^{\rm{m}}\,4.7^{\rm{s}}$ & $59^\circ\,43'\,32.56''$ & 0.15 & -5.812 & 21.345 & 0.557 & 3.90 \\
-	B15 & $2^{\rm{h}}\,38^{\rm{m}}\,24.4^{\rm{s}}$ & $59^\circ\,42'\,40.36''$ & 0.12 & -6.122 & 21.035 & 1.153 & 3.75 \\
+	B1 & $2^{\rm{h}}\,38^{\rm{m}}\,21.8^{\rm{s}}$ & $59^\circ\,54'\,6.98''$ & 0.07 & -9.366 & 17.791 & 0.542 & 1.50 \\
+	B2 & $2^{\rm{h}}\,38^{\rm{m}}\,34.3^{\rm{s}}$ & $59^\circ\,53'\,54.82''$ & 0.14 & -7.504 & 19.653 & 0.882 & 1.65 \\
+	B3 & $2^{\rm{h}}\,38^{\rm{m}}\,24.4^{\rm{s}}$ & $59^\circ\,53'\,55.50''$ & 0.06 & -8.417 & 18.740 & 1.397 & 1.10 \\
+	B4 & $2^{\rm{h}}\,38^{\rm{m}}\,9.8^{\rm{s}}$ & $59^\circ\,53'\,53.52''$ & 0.18 & -6.700 & 20.457 & 2.455 & 2.57 \\
+	B5 & $2^{\rm{h}}\,38^{\rm{m}}\,18.8^{\rm{s}}$ & $59^\circ\,53'\,44.20''$ & 0.07 & -6.736 & 20.421 & 1.523 & 1.73 \\
+	B6 & $2^{\rm{h}}\,38^{\rm{m}}\,31.3^{\rm{s}}$ & $59^\circ\,53'\,26.38''$ & 0.22 & -8.385 & 18.771 & 1.104 & 1.24 \\
+	B7 & $2^{\rm{h}}\,38^{\rm{m}}\,32.5^{\rm{s}}$ & $59^\circ\,53'\,25.22''$ & 0.10 & -7.226 & 19.930 & 1.138 & 1.30 \\
+	B8 & $2^{\rm{h}}\,38^{\rm{m}}\,32.4^{\rm{s}}$ & $59^\circ\,53'\,13.24''$ & 0.12 & -7.514 & 19.643 & 0.783 & 1.15 \\
+	B9 & $2^{\rm{h}}\,38^{\rm{m}}\,38.0^{\rm{s}}$ & $59^\circ\,53'\,9.82''$ & 0.15 & -6.978 & 20.179 & 1.433 & 1.76 \\
+	B10 & $2^{\rm{h}}\,38^{\rm{m}}\,40.3^{\rm{s}}$ & $59^\circ\,52'\,48.79''$ & 0.08 & -7.886 & 19.271 & 1.446 & 1.18 \\
+	B11 & $2^{\rm{h}}\,38^{\rm{m}}\,6.6^{\rm{s}}$ & $59^\circ\,52'\,39.65''$ & 0.10 & -6.025 & 21.132 & 0.989 & 6.32 \\
+	B12 & $2^{\rm{h}}\,37^{\rm{m}}\,57.0^{\rm{s}}$ & $59^\circ\,52'\,25.79''$ & 0.19 & -7.786 & 19.371 & 1.074 & 3.35 \\
+	B13 & $2^{\rm{h}}\,38^{\rm{m}}\,52.6^{\rm{s}}$ & $59^\circ\,51'\,58.57''$ & 0.10 & -7.557 & 19.600 & 1.425 & 1.56 \\
+	B14 & $2^{\rm{h}}\,38^{\rm{m}}\,54.5^{\rm{s}}$ & $59^\circ\,51'\,57.06''$ & 0.18 & -8.685 & 18.471 & 1.369 & 4.42 \\
+	B15 & $2^{\rm{h}}\,38^{\rm{m}}\,47.3^{\rm{s}}$ & $59^\circ\,51'\,40.07''$ & 0.11 & -7.853 & 19.304 & 0.575 & 1.24 \\
 	\hline
 \end{tabular}
 \end{table}

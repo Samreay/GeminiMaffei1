@@ -44,14 +44,14 @@ class Tile(Reducer):
         if not self.redo and os.path.exists(outFile):
             self._debug("Returning previously generated GCs")
             return np.load(outFile)
-        catalog = self.getCatalog(self.fitsPath)
-        gcMask = self.classifier.classify(catalog)
-        ishapeRes = self.runIshape(self.fitsPath, catalog, gcMask)
+        self.catalog = self.getCatalog(self.fitsPath)
+        self.gcMask = self.classifier.classify(catalog)
+        ishapeRes = self.runIshape(self.fitsPath, catalog, self.gcMask)
         
         self.catalogFinal = self.addIshapeDetails(catalog[gcMask], ishapeRes)        
-        gcMask2 = self.classifier.classify2(self.catalogFinal)
+        self.gcMask2 = self.classifier.classify2(self.catalogFinal)
         
-        self.gcsCatalog = self.catalogFinal[gcMask2]
+        self.gcsCatalog = self.catalogFinal[self.gcMask2]
         self.gcsCatalog = self.getRAandDec(self.fitsPath, self.gcsCatalog)
         np.save(outFile, self.gcsCatalog)
         return self.gcsCatalog

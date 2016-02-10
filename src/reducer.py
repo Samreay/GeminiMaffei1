@@ -66,7 +66,7 @@ class Reducer(object):
         self.tempDirSetup = True
         self._debug("Generating temp directory at %s for classifier" % self.tempDir)
 
-    def getCatalog(self, fitsPath, ishape=False, excluded=None):
+    def getCatalog(self, fitsPath, ishape=False, excluded=None, aperture=False):
         self.name = os.path.splitext(os.path.basename(fitsPath))[0]
         catalogOutFile = self.outDir + os.sep + self.name + ("_ishape_" if ishape else "") + "Cat.npy"
         if not self.redo and os.path.exists(catalogOutFile):
@@ -85,13 +85,16 @@ class Reducer(object):
         imageOriginal = fits.getdata(path)
         mask, imageMasked = self.getMaskedImage(imageOriginal)
         imageSubtracted = self.getBackground(imageMasked)
-        catalog, sex = self._getCatalogs(fitsPath, imageSubtracted)
+        catalog, sex = self._getCatalogs(fitsPath, imageSubtracted,aperture=aperture)
         if excluded is not None:
             self._debug("Removing %d excluded sources. Had %d sources."%(excluded.shape[0],catalog.shape[0]))
             catalog = catalog[~self._getCandidateMask(catalog, excluded[['X_IMAGE','Y_IMAGE']].view(np.float64).reshape(excluded.shape + (-1,)))]
             self._debug("Went to %d sources"%catalog.shape[0])
-        catalogTrimmed = self.trimCatalog(catalog, imageOriginal, mask, sex)
-        catalogFinal = self.normaliseRadial(catalogTrimmed, sex)
+        catalogTrimmed = self.trimCatalog(catalog, imageOriginal, mask, sex, aperture=aperture)
+        if not aperture:
+            catalogFinal = self.normaliseRadial(catalogTrimmed, sex)
+        else:
+            catalogFinal = catalogTrimmed
         self.catalog = catalogFinal
         
         if ishape:
@@ -274,7 +277,7 @@ class Reducer(object):
     
         return catTotal, sex
         
-    def trimCatalog(self, catalog, imageOriginal, maskBad, sex, border=60, expand=3, magLimit=30):
+    def trimCatalog(self, catalog, imageOriginal, maskBad, sex, border=60, expand=3, magLimit=30, aperture=False):
         self._debug("Trimming catalog")
         maskBad = maskBad * 1
         maskBad[:,0:border] = 1
@@ -295,9 +298,10 @@ class Reducer(object):
         
         catalogTrimmed = catalog[(maskGood[catalog['Y_IMAGE'].astype(int) - 1,catalog['X_IMAGE'].astype(int) - 1])]
         
-        self._debug("Removing sources that are too faint")
-        for i in range(len(sex.config['PHOT_APERTURES'])):
-            catalogTrimmed = catalogTrimmed[catalogTrimmed['MAG_APER(%d)'%(i+1)] < magLimit]
+        if not aperture:
+            self._debug("Removing sources that are too faint")
+            for i in range(len(sex.config['PHOT_APERTURES'])):
+                catalogTrimmed = catalogTrimmed[catalogTrimmed['MAG_APER(%d)'%(i+1)] < magLimit]
         if self.debugPlot:
             fig, ax0, ax1 = self.getDefaultImgComparison()
             ax0.set_title("Input image and catalog")

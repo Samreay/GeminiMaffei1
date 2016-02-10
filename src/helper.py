@@ -196,16 +196,23 @@ def getDists(cat):
     cat = append_fields(cat, 'DIST', dists, usemask=False)
     return cat
 
-def plotDist(cat):
-    h, e = np.histogram(cat['DIST'], bins=[0,2.5,5,7.5,10,15,20,25,30,35])
+def plotDist(cat, allS):
+    bins = [0,2.5,5,7.5,10,15,20,25,30]
+    h, e = np.histogram(cat['DIST'], bins=bins)
+    hs, es = np.histogram(allS['DIST'], bins=bins)
     c = 0.5 * (e[:-1] + e[1:])
+     
     
-    density = 1.0 * h / ((np.pi * e[1:] *e[1:]) - (np.pi * e[:-1] * e[:-1]))
-    d2 = density / density.max()
+    d2 = 1.0 * h / hs
+    d2 /= d2.max()
+    #density = 1.0 * h / ((np.pi * e[1:] *e[1:]) - (np.pi * e[:-1] * e[:-1]))
+    #d2 = density / density.max()
     
     fig, ax0 = plt.subplots(figsize=(5,4), ncols=1, sharey=True)
     #ax0.plot(c, 1.0*h/h.max(), 'b', label="By radius")
-    ax0.plot(c, d2, 'b', label="Normalised by area")
+    ax0.plot(c, d2, 'b', label="Density ratio")
+    ax0.plot(c, hs*1.0/hs.max(), 'r', label="Density all")
+    ax0.plot(c, h*1.0/h.max(), 'g', label="Density all")
     #ax0.legend(loc=4)
     ax0.set_xlabel(r"$\rm{Arcminutes\ from\ Maffei\ 1\ center}$", fontsize=16)
     ax0.set_ylabel(r"$\rm{Relaitve\ area\ density}$", fontsize=16)
@@ -274,7 +281,7 @@ def getAbsolute(apparent, distance=2.7e6):
                 
 def plotSizeDiagrams(cat):
     label=r"$\chi^2_{\rm{Delta}} / \chi^2_{\rm{King30}}$"
-    fig, ax0 = plt.subplots(figsize=(5,5))
+    fig, ax0 = plt.subplots(figsize=(5,4.5))
     ax0.invert_yaxis()
     
     y = cat['Z_ABS']
@@ -294,7 +301,13 @@ def plotSizeDiagrams(cat):
     cb = plt.colorbar(h1, cax = cax)  
     cb.set_label(label, fontsize=16)
     
+    ax0.locator_params(nbins=6)
+    cax.locator_params(nbins=6)
+    plt.tight_layout()
     fig.savefig("kingFWHM.pdf", bbox_inches="tight")
+    fig.set_size_inches(3.5, 3)
+    fig.savefig("kingFWHM.png", transparent=True, bbox_inches="tight", dpi=300)
+    
     
 def plotColourDiagrams(cat, colourColumn='Chi2DeltaKingDiv', label=r"$\chi^2_{\rm{Delta}} / \chi^2_{\rm{King30}}$"):
     mag = cat['Z_ABS']
@@ -308,7 +321,7 @@ def plotColourDiagrams(cat, colourColumn='Chi2DeltaKingDiv', label=r"$\chi^2_{\r
     
     
     
-    fig, axes = plt.subplots(figsize=(15,5), ncols=3, sharey=True)
+    fig, axes = plt.subplots(figsize=(12,4), ncols=3, sharey=True)
     axes[0].invert_yaxis()
     
     # ELLIPTICITY gives a lot of variation. However max is 0.25, so still in possible GC range
@@ -348,4 +361,65 @@ def plotColourDiagrams(cat, colourColumn='Chi2DeltaKingDiv', label=r"$\chi^2_{\r
     #axes[2].set_ylabel("$z'$", fontsize=16)
 
     plt.tight_layout()
+    axes[0].locator_params(nbins=6)
+    axes[1].locator_params(nbins=6)
+    axes[2].locator_params(nbins=6)
+    cax.locator_params(nbins=6)
     fig.savefig("colour.pdf", bbox_inches="tight")
+    fig.set_size_inches(6.5,2.5)
+    axes[0].locator_params(nbins=4)
+    axes[1].locator_params(nbins=4)
+    axes[2].locator_params(nbins=4)
+    cax.locator_params(nbins=5)
+    fig.savefig("colour.png", transparent=True, bbox_inches="tight", dpi=300)
+
+    
+def plotColourDiagrams2(cat, colourColumn='Chi2DeltaKingDiv', label=r"$\chi^2_{\rm{Delta}} / \chi^2_{\rm{King30}}$"):
+    z = cat['Z_8']
+    i = cat['I_8']
+    r = cat['R_8']
+    
+    zmask = cat['Z_MASK'] & (cat['Z_8'] < 90)
+    imask = cat['Z_MASK'] & (cat['I_8'] < 90)
+    rmask = cat['Z_MASK'] & (cat['R_8'] < 90)
+    
+    
+    mm = zmask & imask & rmask
+    
+    fig, axes = plt.subplots(figsize=(11,5), ncols=2, sharey=True)
+    axes[0].invert_yaxis()
+    
+    # ELLIPTICITY gives a lot of variation. However max is 0.25, so still in possible GC range
+    # FLUX_AUTO shows potential truncation on left hand side of plots
+    # CI shows some outliers, but not as much as ELLIPTICITY
+    # CI2 is much the same
+    # KingFWHM has a few massive outliers that should be removed
+    # Chi2DeltaKingDiv has a small subset which kings are FAR better than delta. Class A candidates maybe. A lot hover around 1.0
+    # FWHM_IMAGE has some very large FWHMs, maybe should remove those as well
+    
+    # FLIP AXIS ON Y BECAUSE HA (i-z, r-i, r-z)
+    # FIND DUST MAP FOR OUR FOV (whether data or webserver)
+    
+    
+    cmap = 'viridis'
+    vmax = 3    
+    vmin = 1
+    
+    h1 = axes[0].scatter(i[mm] - z[mm], r[mm] - z[mm], c=cat[mm][colourColumn], vmin=vmin, vmax=vmax, edgecolor="none", cmap=cmap)
+    h2 = axes[1].scatter(r[mm] - i[mm], r[mm] - z[mm], c=cat[mm][colourColumn], vmin=vmin, vmax=vmax, edgecolor="none", cmap=cmap)
+    
+    divider = make_axes_locatable(axes[1])
+    cax = divider.append_axes("right", size="5%", pad=0.05)
+    #cbaxes = fig.add_axes([0.905, 0.13, 0.01, 0.77])
+    cb = plt.colorbar(h1, cax = cax)  
+    cb.set_label(label, fontsize=16)
+    
+    axes[0].set_xlabel("$i' - z'$", fontsize=16)
+    axes[1].set_xlabel("$r' - i'$", fontsize=16)
+    
+    axes[0].set_ylabel("$r' - z'$", fontsize=16)
+    #axes[1].set_ylabel("$i'$", fontsize=16)
+    #axes[2].set_ylabel("$z'$", fontsize=16)
+
+    plt.tight_layout()
+    fig.savefig("colour2.pdf", bbox_inches="tight")

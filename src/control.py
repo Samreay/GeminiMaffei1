@@ -11,8 +11,8 @@ tempParentDir = "../temp"
 tileDir = "../resources/tiles"
 mosaicDir = "../resources/mosaic"
 view = r"/Users/shinton/Documents/backup/GeminiMaffei1/resources/mosaicZSub.fits"
-
 '''
+
 classifier = Classifier("../resources/classified", tempParentDir=tempParentDir, debugPlot=True)
 classifier.getClassifiers()
 
@@ -79,48 +79,56 @@ psfd = addColourDiff(psfc)
 print("Before doubles",gccd.shape)
 gccdd = removeDoubles(gccd)
 print("After doubles",gccdd.shape)
-'''
+
 print(gccdd.shape)
 gccf = plotColourDifference(gccdd, psfd)
 print("a",gccf.shape)
 gccf = gccf[gccf['KingFWHM'] < 15]
 print("b",gccf.shape)
-gccf = gccf[np.abs(gccf['RMZ_9']) < 4]
+gccf = gccf[np.abs(gccf['RMZ_9']) < 5]
 print("c",gccf.shape)
 gccf = gccf[gccf['KingFWHM'] > 0.1]
+
+
 print("d",gccf.shape)
-gccf = gccf[gccf['Z_ABS'] > -11]
+gccf = gccf[gccf['Z_ABS'] > -12]
 print("e",gccf.shape)
 gccf = gccf[gccf['Chi2DeltaKingDiv'] > 1]
 print("f",gccf.shape)
 gccf = addFWHM(gccf)
-gccf = gccf[gccf['KFWHM'] > 2]
+gccf = gccf[gccf['KFWHM'] > 1]
+gccf = gccf[gccf['KFWHM'] < 15]
 print("g",gccf.shape)
 
+
+
+allS = m.cat.copy()
+allS = getDists(allS)
 g = getDists(gccf)
-#plotDist(g)
+'''
+plotDist(g, allS)
 
-
-
+'''
 colors = ['Chi2DeltaKingDiv']#, 'ELLIPTICITY', 'CI', 'CI2', 'KingFWHM']
 for c in colors:
     plotColourDiagrams(g, colourColumn=c)    
+    #plotColourDiagrams2(g, colourColumn=c)    
 
-plotSizeDiagrams(g)    
-
+#plotSizeDiagrams(g)    
 
 classA = g['Chi2DeltaKingDiv'] > 1.5
 classB = ~classA
 
-np.savetxt("classA.txt",g[classA][['RA','DEC']])
+np.savetxt("classA.txt",g[classA][['RA','DEC','KFWHM']])
 np.savetxt("classB.txt",g[classB][['RA','DEC']])
 
 print(classA.sum())
 print(classB.sum())
-'''
 
 
-'''
+
+
+
 print(latexPrint(g[classA][:15], "A"))
 print("\n\n---\n\n")
 print(latexPrint(g[classB][:15], "B"))

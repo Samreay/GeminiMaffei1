@@ -67,23 +67,25 @@ class Mosaic(Reducer):
     def getMagnitudes(self, threshold=0.0004):
         outFile = self.outDir + os.sep + "cat" + self.subName + ".npy"
         if os.path.exists(outFile):
-            cat = np.load(outFile)
+            self.cat = np.load(outFile)
         else:
-            cat,sex = self._getCatalogs(self.fitsPath, None, aperture=True)
+            #cat,sex = self._getCatalogs(self.fitsPath, None, aperture=True)
+            cat = self.getCatalog(self.fitsPath, aperture=True)
             cat = self.getRAandDec(self.fitsPath, cat)
+            self.cat = cat
             np.save(outFile, cat)
         mag = []
         magE = []
         for entry in self.catalog:
             ra = entry['RA']
             dec = entry['DEC']
-            dists = np.sqrt((cat['RA']-ra)*(cat['RA']-ra) + (cat['DEC']-dec)*(cat['DEC']-dec))
+            dists = np.sqrt((self.cat['RA']-ra)*(self.cat['RA']-ra) + (self.cat['DEC']-dec)*(self.cat['DEC']-dec))
             minDist = dists.argmin()
             if dists[minDist] < threshold:
                 entry['RA'] = ra
                 entry['DEC'] = dec
-                mag.append(cat[minDist]['MAG_BEST'])
-                magE.append(cat[minDist]['MAGERR_BEST'])
+                mag.append(self.cat[minDist]['MAG_BEST'])
+                magE.append(self.cat[minDist]['MAGERR_BEST'])
             else:
                 mag.append(np.NaN)
                 magE.append(np.NaN)
