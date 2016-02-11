@@ -105,16 +105,6 @@ print("g",gccf.shape)
 allS = m.cat.copy()
 allS = getDists(allS)
 g = getDists(gccf)
-'''
-plotDist(g, allS)
-
-'''
-colors = ['Chi2DeltaKingDiv']#, 'ELLIPTICITY', 'CI', 'CI2', 'KingFWHM']
-for c in colors:
-    plotColourDiagrams(g, colourColumn=c)    
-    #plotColourDiagrams2(g, colourColumn=c)    
-
-#plotSizeDiagrams(g)    
 
 classA = g['Chi2DeltaKingDiv'] > 1.5
 classB = ~classA
@@ -125,10 +115,22 @@ np.savetxt("classB.txt",g[classB][['RA','DEC']])
 print(classA.sum())
 print(classB.sum())
 
+'''
+
+#plotDist(g, allS)
 
 
+colors = ['Chi2DeltaKingDiv']#, 'ELLIPTICITY', 'CI', 'CI2', 'KingFWHM']
+for c in colors:
+    plotColourDiagrams(g, classA,colourColumn=c)    
+    #plotColourDiagrams2(g, colourColumn=c)    
+
+plotSizeDiagrams(g, classA)    
+
+#plotSizeHistogram(g, classA)
 
 
+'''
 print(latexPrint(g[classA][:15], "A"))
 print("\n\n---\n\n")
 print(latexPrint(g[classB][:15], "B"))

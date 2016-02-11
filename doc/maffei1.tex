@@ -242,29 +242,17 @@ In order to reduce the number of false positives given by the second classifier 
 	\centering
 	\begin{minipage}[t]{.49\textwidth}
 	\includegraphics[width=\textwidth]{images/classifier_1.pdf}
-	\caption{The probability $P(r_h, m_{z'})$ of correctly classifying an extended object using the initial classifier supplied with data from \textsc{SExtractor}. Classification accuracy decreases as $r_h$ decreases, as the source becomes more pointlike. Similarly, we notice a that objects dimmer than an apparent $z'$ band magnitude of 16.5 are not classified correctly, as they are not detected by \textsc{SExtractor}. The high detection rates for this classifier come with a high number of false positives, with 31\% of the classified extended objects being false positives.}
+	\caption{The probability $P(r_h, m_{z'})$ of correctly classifying an extended object using the initial classifier supplied with data from \textsc{SExtractor}. Classification accuracy decreases as $r_h$ decreases, as the source becomes more pointlike. Similarly, we notice a that objects dimmer than an apparent $z'$ band magnitude of 16.5 are not classified correctly, as they are not detected by \textsc{SExtractor}. The high detection rates for this classifier come with a high number of false positives, with 31\% of the classified extended objects being false positives. As apparent magnitude translates directly into electron count when generating artificial objects, the chance of detecting a dim source decreases with increasing $r_h$ due to the peak brightness of the object falling.}
 	\label{fig:comp1}
 	\end{minipage}\hfill
 	\begin{minipage}[t]{.49\textwidth}
 		\includegraphics[width=\textwidth]{images/classifier_2.pdf}
-		\caption{The probability $P(r_h, \mu)$ of correctly classifying an extended object using the secondary classifier, that is supplied with both data from \textsc{SExtractor} and data from \textsc{IShape} fitting to a King profile. We notice similar difficulties in detecting the very faint and very compact sources. The benefit of the additional information from \textsc{iShape} is revealed when looking at the classification contamination: this classifier has a reduced false positive rate of 17\%.}
+		\caption{The probability $P(r_h, \mu)$ of correctly classifying an extended object using the secondary classifier, that is supplied with both data from \textsc{SExtractor} and data from \textsc{IShape} fitting to a King profile. We notice similar difficulties in detecting the very faint and very compact sources as in the first classifier. The benefit of the additional information from \textsc{iShape} is revealed when looking at the classification contamination: this classifier has a reduced false positive rate of 17\%, and is removing more of the false positive stars without also removing extended sources.}
 		\label{fig:comp2}
 	\end{minipage}
 \end{figure*}
 
-%
-%
-%\begin{figure}
-%	\includegraphics[width=0.49\textwidth]{images/classifier_1.pdf}
-%	\caption{The probability $P(r_h, m_{z'})$ of correctly classifying an extended object using the initial classifier supplied with data from \textsc{SExtractor}. Classification accuracy decreases as $r_h$ decreases, as the source becomes more pointlike. Similarly, we notice a that objects dimmer than an apparent $z'$ band magnitude of 16.5 are not classified correctly, as they are not detected by \textsc{SExtractor}.The maximum detection rate found corresponds to a $90\%$ chance of detection.}
-%	\label{fig:comp1}
-%\end{figure}
-%\begin{figure}
-%	\includegraphics[width=0.49\textwidth]{images/classifier_2.pdf}
-%	\caption{The probability $P(r_h, \mu)$ of correctly classifying an extended object using the secondary classifier, that is supplied with both data from \textsc{SExtractor} and data from \textsc{IShape} fitting to a King profile. The fitting information allows increased discrimination between point sources and extended objects at lower values of $r_h$. The maximum chance of detection mirrors that found in Figure \ref{fig:comp1} at $90\%$.}
-%	\label{fig:comp2}
-%\end{figure}
-
+The list of output candidates were further separated into two categories, referred to as Class A candidates and Class B candidates. Defining the ratio of matching strength between delta profiles and King profiles as $\chi^2_R \equiv \chi^2_{\rm{Delta}}  / \chi^2_{\rm{King30}}$, candidates which have  $\chi^2_R > 1.5$ are categorized as Class A candidates, thus leaving Class B candidates with $1 \leq \chi^2_R \leq 1.5$. Thus, Class A candidates represent objects that have a confident extended profile. The full catalog of 720 results is available in the online publication, and those utilising the data set may wish to apply their own additional cuts or selection criteria to suit their scientific purposes.
 
 
 
@@ -274,22 +262,35 @@ In order to reduce the number of false positives given by the second classifier 
 \subsection{Globular clusters color-magnitude diagram}
 \label{sec:gc_cmd}
 
-\begin{figure*}
-	\includegraphics[width=\textwidth]{images/colour.pdf}
-	\caption{The determine colours of the GC candidates in the $r'$, $i'$ and $z'$ bands when applicable.{\color{red} put something interesting here} }
-	\label{fig:colour}
-\end{figure*}
 
-\lipsum[1-2]
+
+ Comparing these colours to the colours of the globular clusters identified by CTIO instruments in \citet{Vanderbeke2014} shows a significant level of difference when taking all objects into account. The mean colours from \citet{Vanderbeke2014} are $\overline{r'-z'} = 0.44$, $\overline{r'-i'} = 0.29$ and $\overline{i'-z'} = 0.15$. In contrast, the mean colours for Class A candidates are $\overline{r'-z'} = 1.10$, $\overline{r'-i'} = 0.70$ and $\overline{i'-z'} = 0.40$, and the mean colours for Class B candidates are $\overline{r'-z'} = 1.26$, $\overline{r'-i'} = 0.80$ and $\overline{i'-z'} = 0.46$. The colours of the GC candidates are shown against their calculated absolute $z'$ magnitude in Figure \ref{fig:colour}.
+ 
+ From the comparison, we see that the GC candidates for Maffei 1 are significantly redder than the GCs found in the Milky Way. This extra reddening was also found in the prior GC study of Maffei 1 by \citet{buta03}, who suggested that if the clusters are not obscured and variable extinction was not the primary source of reddening, that the difference could potentially be attributed to increase metallicity in Maffei 1 than the Milky Way. The candidates selected in this study reinforce the increased reddening of GCs in Maffei 1, and makes spectral analysis of mettalicity a key science goal for future analyses.
+ 
+ \begin{figure*}
+ 	\includegraphics[width=\textwidth]{images/colour.pdf}
+ 	\caption{The determine colours of the GC candidates in the $r'$, $i'$ and $z'$ bands when applicable.}
+ 	\label{fig:colour}
+ \end{figure*}
+ 
+ 
 
 \subsection{Globular cluster sizes}
 \label{sec:gc_sizes}
+
+
+
 \begin{figure}
 	\includegraphics[width=\columnwidth]{images/kingFWHM.pdf}
 	\caption{The fitted FWHM of a King30 profile for each GC candidate. Pixel values were transformed into parsecs using a galactic distance of 2.7 Mpc. Brighter and more extended objects have better fits to the King 30 profile than a delta profile, as expected.}
 	\label{fig:kfwhm}
 \end{figure}
-
+\begin{figure}
+	\includegraphics[width=\columnwidth]{images/sizeHist.pdf}
+	\caption{The size distribution of the FWHM fits of a King30 profile for both Class A and B candidates, using a distance to Maffei 1 of 2.7 Mpc. Class A candidates have a strong correlation with increased FWHM radius as expected.}
+	\label{fig:kfwhmHist}
+\end{figure}
 \lipsum[1-2]
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

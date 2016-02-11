@@ -26,6 +26,12 @@ from sklearn.ensemble import AdaBoostClassifier
 from sklearn.tree import DecisionTreeClassifier
 import subprocess
 import stat
+import matplotlib.patches as mpatches
+import matplotlib.lines as mlines
+from matplotlib.legend_handler import HandlerLine2D
+
+
+
 
 def showInDS9(fitsFile, catalog=None, cols=['X_IMAGE','Y_IMAGE']):
     try:
@@ -279,7 +285,7 @@ def getAbsolute(apparent, distance=2.7e6):
     return apparent - 2.5 * np.log10((distance/10)**2)
                 
                 
-def plotSizeDiagrams(cat):
+def plotSizeDiagrams(cat, classA):
     label=r"$\chi^2_{\rm{Delta}} / \chi^2_{\rm{King30}}$"
     fig, ax0 = plt.subplots(figsize=(5,4.5))
     ax0.invert_yaxis()
@@ -292,24 +298,61 @@ def plotSizeDiagrams(cat):
     vmax = 3
     cmap = 'viridis'
 
-    h1 = ax0.scatter(x[mask], y[mask], c=c[mask],edgecolor="none", cmap=cmap,vmin=vmin, vmax=vmax) # 
+    h1 = ax0.scatter(x[mask & ~classA], y[mask & ~classA], c=c[mask & ~classA],edgecolor="none", cmap=cmap,vmin=vmin, vmax=vmax, marker=">", label="Class B") # 
+    h1 = ax0.scatter(x[mask & classA], y[mask & classA], c=c[mask & classA],edgecolor="none", cmap=cmap,vmin=vmin, vmax=vmax, label="Class A") # 
     ax0.set_ylabel(r"$M_{z'}$", fontsize=16)
     ax0.set_xlabel(r"$\rm{King30\ FWHM\ (pc)}$", fontsize=16)
     
+    caa = mlines.Line2D([], [], color='#69CF37', markeredgecolor='#69CF37', linewidth=0, marker='o', linestyle='none', markersize=8, label='Class A')
+    cbb = mlines.Line2D([], [], color='#1B737B', markeredgecolor='#1B737B', linewidth=0, marker='>', linestyle='none', markersize=8, label='Class B')
+    ax0.legend(handler_map={caa: HandlerLine2D(numpoints=1), cbb: HandlerLine2D(numpoints=1)}, handles=[caa, cbb]) #)
+
     divider = make_axes_locatable(ax0)
     cax = divider.append_axes("right", size="5%", pad=0.05)
-    cb = plt.colorbar(h1, cax = cax)  
+    cb = plt.colorbar(h1, cax = cax, ticks=[1, 1.5, 2,2.5, 3])  
     cb.set_label(label, fontsize=16)
     
     ax0.locator_params(nbins=6)
-    cax.locator_params(nbins=6)
+    ax0.axis('tight')
+    #cax.locator_params(nbins=6)
     plt.tight_layout()
     fig.savefig("kingFWHM.pdf", bbox_inches="tight")
     fig.set_size_inches(3.5, 3)
+    ax0.legend(handler_map={caa: HandlerLine2D(numpoints=1), cbb: HandlerLine2D(numpoints=1)}, frameon=False, borderpad=0, labelspacing=0, columnspacing=0, handles=[caa, cbb],bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
+           ncol=2, mode="expand", borderaxespad=0.) #)
     fig.savefig("kingFWHM.png", transparent=True, bbox_inches="tight", dpi=300)
     
+def plotSizeHistogram(cat, classA):
+
+    data1 = cat[classA]['KFWHM']    
+    data2 = cat[~classA]['KFWHM']
+    bins = np.arange(0,15,1)+0.5
+    binc = 0.5 * (bins[:-1] + bins[1:])
     
-def plotColourDiagrams(cat, colourColumn='Chi2DeltaKingDiv', label=r"$\chi^2_{\rm{Delta}} / \chi^2_{\rm{King30}}$"):
+    h1,b = np.histogram(data1, bins=bins)
+    h2,b = np.histogram(data2, bins=bins)
+    
+    fig,ax0 = plt.subplots(figsize=(5,4))
+    
+    ax0.bar(binc, h1, edgecolor='none', facecolor='#69CF37', label="Class A", align='center')
+    ax0.bar(binc, h2, bottom=h1, edgecolor='none', facecolor='#1B737B', label="Class B", align='center')
+    ax0.legend(loc=1)
+    ax0.set_xlabel(r"$\rm{King30\ FWHM\ (pc)}$", fontsize=16)
+    ax0.set_ylabel(r"$\rm{Count}$", fontsize=16)
+    ax0.xaxis.set_ticks(binc)
+    #ax0.axis('tight')
+    #ax0.margins(0.05, 0.01)
+    plt.tight_layout()
+    fig.savefig("sizeHist.pdf", bbox_inches="tight")
+    fig.set_size_inches(3, 3)
+    ax0.xaxis.set_ticks(binc[::2])
+
+    fig.savefig("sizeHist.png", bbox_inches="tight", dpi=300, transparent=True)
+
+
+    
+    
+def plotColourDiagrams(cat, classA, colourColumn='Chi2DeltaKingDiv', label=r"$\chi^2_{\rm{Delta}} / \chi^2_{\rm{King30}}$"):
     mag = cat['Z_ABS']
     z = cat['Z_8']
     i = cat['I_8']
@@ -320,6 +363,9 @@ def plotColourDiagrams(cat, colourColumn='Chi2DeltaKingDiv', label=r"$\chi^2_{\r
     rmask = cat['Z_MASK'] & (cat['R_8'] < 90)
     
     
+    vrmz = 0.43275675675675679
+    vrmi = 0.28572500000000012
+    vimz = 0.14756756756756753
     
     fig, axes = plt.subplots(figsize=(12,4), ncols=3, sharey=True)
     axes[0].invert_yaxis()
@@ -342,14 +388,24 @@ def plotColourDiagrams(cat, colourColumn='Chi2DeltaKingDiv', label=r"$\chi^2_{\r
     vmax = 3    
     vmin = 1
     
-    h1 = axes[0].scatter(i[zmask & imask] - z[zmask & imask], mag[zmask & imask], c=cat[zmask & imask][colourColumn], vmin=vmin, vmax=vmax, edgecolor="none", cmap=cmap)
-    h2 = axes[1].scatter(r[rmask & imask] - i[rmask & imask], mag[rmask & imask], c=cat[rmask & imask][colourColumn], vmin=vmin, vmax=vmax, edgecolor="none", cmap=cmap)
-    h3 = axes[2].scatter(r[zmask & rmask] - z[zmask & rmask], mag[zmask & rmask], c=cat[zmask & rmask][colourColumn], vmin=vmin, vmax=vmax, edgecolor="none", cmap=cmap)
     
+    h1 = axes[0].scatter(i[zmask & imask & ~classA] - z[zmask & imask & ~classA], mag[zmask & imask & ~classA], c=cat[zmask & imask & ~classA][colourColumn], vmin=vmin, vmax=vmax, edgecolor="none", cmap=cmap, marker=">", label="Class B")
+    h2 = axes[1].scatter(r[rmask & imask & ~classA] - i[rmask & imask & ~classA], mag[rmask & imask & ~classA], c=cat[rmask & imask & ~classA][colourColumn], vmin=vmin, vmax=vmax, edgecolor="none", cmap=cmap, marker=">")
+    h3 = axes[2].scatter(r[zmask & rmask & ~classA] - z[zmask & rmask & ~classA], mag[zmask & rmask & ~classA], c=cat[zmask & rmask & ~classA][colourColumn], vmin=vmin, vmax=vmax, edgecolor="none", cmap=cmap, marker=">")
+    h1 = axes[0].scatter(i[zmask & imask & classA] - z[zmask & imask & classA], mag[zmask & imask & classA], c=cat[zmask & imask & classA][colourColumn], vmin=vmin, vmax=vmax, edgecolor="none", cmap=cmap, label="Class A")
+    h2 = axes[1].scatter(r[rmask & imask & classA] - i[rmask & imask & classA], mag[rmask & imask & classA], c=cat[rmask & imask & classA][colourColumn], vmin=vmin, vmax=vmax, edgecolor="none", cmap=cmap)
+    h3 = axes[2].scatter(r[zmask & rmask & classA] - z[zmask & rmask & classA], mag[zmask & rmask & classA], c=cat[zmask & rmask & classA][colourColumn], vmin=vmin, vmax=vmax, edgecolor="none", cmap=cmap)
+
+    print("Class A mean rmz: %0.5f"%(r[zmask & rmask & classA] - z[zmask & rmask & classA]).mean())
+    print("Class A mean imz: %0.5f"%(i[zmask & imask & classA] - z[zmask & imask & classA]).mean())
+    print("Class A mean rmi: %0.5f"%(r[imask & rmask & classA] - i[imask & rmask & classA]).mean())
+    print("Class B mean rmz: %0.5f"%(r[zmask & rmask & ~classA] - z[zmask & rmask & ~classA]).mean())
+    print("Class B mean imz: %0.5f"%(i[zmask & imask & ~classA] - z[zmask & imask & ~classA]).mean())
+    print("Class B mean rmi: %0.5f"%(r[imask & rmask & ~classA] - i[imask & rmask & ~classA]).mean())
     divider = make_axes_locatable(axes[2])
     cax = divider.append_axes("right", size="5%", pad=0.05)
     #cbaxes = fig.add_axes([0.905, 0.13, 0.01, 0.77])
-    cb = plt.colorbar(h1, cax = cax)  
+    cb = plt.colorbar(h1, cax = cax, ticks=[1,1.5, 2,2.5, 3])  
     cb.set_label(label, fontsize=16)
     
     axes[0].set_xlabel("$i' - z'$", fontsize=16)
@@ -357,6 +413,11 @@ def plotColourDiagrams(cat, colourColumn='Chi2DeltaKingDiv', label=r"$\chi^2_{\r
     axes[2].set_xlabel("$r' - z'$", fontsize=16)
     
     axes[0].set_ylabel("$M_{z'}$", fontsize=16)
+    
+    caa = mlines.Line2D([], [], color='#69CF37', markeredgecolor='#69CF37', linewidth=0, marker='o', linestyle='none', markersize=8, label='Class A')
+    cbb = mlines.Line2D([], [], color='#1B737B', markeredgecolor='#1B737B', linewidth=0, marker='>', linestyle='none', markersize=8, label='Class B')
+    axes[1].legend(handler_map={caa: HandlerLine2D(numpoints=1), cbb: HandlerLine2D(numpoints=1)}, handles=[caa, cbb]) #)
+
     #axes[1].set_ylabel("$i'$", fontsize=16)
     #axes[2].set_ylabel("$z'$", fontsize=16)
 
@@ -364,13 +425,23 @@ def plotColourDiagrams(cat, colourColumn='Chi2DeltaKingDiv', label=r"$\chi^2_{\r
     axes[0].locator_params(nbins=6)
     axes[1].locator_params(nbins=6)
     axes[2].locator_params(nbins=6)
-    cax.locator_params(nbins=6)
+    
+    axes[0].axis('tight')
+    axes[1].axis('tight')
+    axes[2].axis('tight')
+
+    #cax.locator_params(nbins=6)
     fig.savefig("colour.pdf", bbox_inches="tight")
+    axes[1].legend(handler_map={caa: HandlerLine2D(numpoints=1), cbb: HandlerLine2D(numpoints=1)}, frameon=False, handles=[caa, cbb], bbox_to_anchor=(-0.2, 1.02, 1.4, .102), loc=3, ncol=2, mode="expand", borderaxespad=0.) #)
+
     fig.set_size_inches(6.5,2.5)
     axes[0].locator_params(nbins=4)
     axes[1].locator_params(nbins=4)
     axes[2].locator_params(nbins=4)
-    cax.locator_params(nbins=5)
+    axes[0].axvline(vimz, color="#888888", ls=":")
+    axes[1].axvline(vrmi, color="#888888", ls=":")
+    axes[2].axvline(vrmz, color="#888888", ls=":")
+    #cax.locator_params(nbins=4)
     fig.savefig("colour.png", transparent=True, bbox_inches="tight", dpi=300)
 
     
@@ -411,7 +482,7 @@ def plotColourDiagrams2(cat, colourColumn='Chi2DeltaKingDiv', label=r"$\chi^2_{\
     divider = make_axes_locatable(axes[1])
     cax = divider.append_axes("right", size="5%", pad=0.05)
     #cbaxes = fig.add_axes([0.905, 0.13, 0.01, 0.77])
-    cb = plt.colorbar(h1, cax = cax)  
+    cb = plt.colorbar(h1, cax = cax, ticks=[1, 2, 3])  
     cb.set_label(label, fontsize=16)
     
     axes[0].set_xlabel("$i' - z'$", fontsize=16)
