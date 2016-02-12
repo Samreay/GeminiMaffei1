@@ -31,6 +31,7 @@ import matplotlib.lines as mlines
 from matplotlib.legend_handler import HandlerLine2D
 
 
+from matplotlib import ticker
 
 
 def showInDS9(fitsFile, catalog=None, cols=['X_IMAGE','Y_IMAGE']):
@@ -98,7 +99,7 @@ def addFWHM(cat):
     return cat
 
     
-def latexPrint(catalog,label, columns=['RA','DEC','ELLIPTICITY','Z_ABS', 'Z_MAG','RMZ_11', 'KFWHM'], labels=["RA","DEC",r"$\epsilon$","$M_{z'}$","$m_{z'}$","$r'-z'$", 'King$_{30}$ FWHM (pc)'], positions=["l","l","c","c","c","c","c"], formats=["%s","%s", "%0.2f","%0.3f","%0.3f","%0.3f","%0.2f"]):
+def latexPrint(catalog,label, columns=['RA','DEC','ELLIPTICITY','Z_ABS', 'Z_MAG','RMZ_11', 'KFWHM'], labels=["RA","DEC",r"$\epsilon$","$M_{z'}$","$m_{z'}$","$r'-z'$", 'King$_{30}$ FWHM (pc)'], positions=["l","l","c","c","c","c","c"], formats=["%s","%s", "%0.2f","%0.3f","%0.3f","%0.3f","%0.1f"]):
     from astropy import units as u
     from astropy.coordinates import SkyCoord
     
@@ -343,14 +344,94 @@ def plotSizeHistogram(cat, classA):
     #ax0.axis('tight')
     #ax0.margins(0.05, 0.01)
     plt.tight_layout()
-    fig.savefig("sizeHist.pdf", bbox_inches="tight")
+    #fig.savefig("sizeHist.pdf", bbox_inches="tight")
     fig.set_size_inches(3, 3)
     ax0.xaxis.set_ticks(binc[::2])
 
     fig.savefig("sizeHist.png", bbox_inches="tight", dpi=300, transparent=True)
 
+def plotSizeHistogram2(cat, classA):
 
+    data0 = cat['KFWHM']    
+    data1 = cat[classA]['KFWHM']    
+    data2 = cat[~classA]['KFWHM']
     
+    bins0 = getOptimalBinSize(data0)
+    bins1 = getOptimalBinSize(data1)
+    bins2 = getOptimalBinSize(data2)
+    bins1 = bins0 = bins2 = np.arange(0,15) + 0.5
+    
+    
+    binc0 = 0.5 * (bins0[:-1] + bins0[1:])
+    binc1 = 0.5 * (bins1[:-1] + bins1[1:])
+    binc2 = 0.5 * (bins2[:-1] + bins2[1:])
+    
+    density = False
+    h0,b = np.histogram(data0, bins=bins0, density=density)
+    h1,b = np.histogram(data1, bins=bins1, density=density)
+    h2,b = np.histogram(data2, bins=bins2, density=density)
+    
+    
+    fig,ax0 = plt.subplots(figsize=(4.5,3.5))
+    
+    ax0.hist(binc1, bins=bins1, weights=h1, histtype='step', color='#69CF37', linewidth=2, label="Class A")
+    ax0.hist(binc2, bins=bins2, weights=h2, histtype='step', color='#1B737B', ls="--", linewidth=2, label="Class B")
+    ax0.hist(binc0, bins=bins0, weights=h0, histtype='step', color='k', ls=":", linewidth=2, label="Total")
+    #ax0.bar(binc, h2, bottom=h1, edgecolor='none', facecolor='#1B737B', label="Class B", align='center')
+    ax0.legend(loc=1)
+    ax0.set_xlabel(r"$\rm{King30\ FWHM\ (pc)}$", fontsize=16)
+    ax0.set_ylabel(r"$\rm{N}$", fontsize=16)
+    ax0.xaxis.set_ticks(np.arange(1,15))
+    #ax0.axis('tight')
+    #ax0.margins(0.05, 0.01)
+    plt.tight_layout()
+    fig.savefig("sizeHist.pdf", bbox_inches="tight")
+
+    #fig.savefig("sizeHist.png", bbox_inches="tight", dpi=300, transparent=True)
+    
+    
+def plotColourHistogram(cat, classA):
+    data0 = cat['RMZ_9']
+    data1 = data0[classA]
+    data2 = data0[~classA]    
+    
+    bins0 = getOptimalBinSize(data0)
+    bins1 = getOptimalBinSize(data1)
+    bins2 = getOptimalBinSize(data2)
+    gap = 0.2
+    bins1 = bins0 = bins2 = np.arange(-1,3.5,gap) + gap/2
+    
+    binc0 = 0.5 * (bins0[:-1] + bins0[1:])
+    binc1 = 0.5 * (bins1[:-1] + bins1[1:])
+    binc2 = 0.5 * (bins2[:-1] + bins2[1:])
+
+
+    density = False
+    h0,b = np.histogram(data0, bins=bins0, density=density)
+    h1,b = np.histogram(data1, bins=bins1, density=density)
+    h2,b = np.histogram(data2, bins=bins2, density=density)
+    
+    fig,ax0 = plt.subplots(figsize=(4.5,3.5))
+    
+    ax0.hist(binc1, bins=bins1, weights=h1, histtype='step', color='#69CF37', linewidth=2, label="Class A")
+    ax0.hist(binc2, bins=bins2, weights=h2, histtype='step', color='#1B737B', ls="--", linewidth=2, label="Class B")
+    ax0.hist(binc0, bins=bins0, weights=h0, histtype='step', color='k', ls=":", linewidth=2, label="Total")
+    
+    
+    ax0.locator_params(nbins=6, axis='x')
+    ax0.locator_params(nbins=8, axis='y')
+    
+    
+    ax0.legend(loc=1)
+    ax0.set_xlabel(r"$r' - z'$", fontsize=16)
+    ax0.set_ylabel(r"$\rm{N}$", fontsize=16)
+    #ax0.xaxis.set_ticks(np.arange(1,15))
+    #ax0.axis('tight')
+    #ax0.margins(0.05, 0.01)
+    plt.tight_layout()
+    fig.savefig("colourHist.pdf", bbox_inches="tight")
+
+    #fig.savefig("sizeHist.png", bbox_inches="tight", dpi=300, transparent=True)
     
 def plotColourDiagrams(cat, classA, colourColumn='Chi2DeltaKingDiv', label=r"$\chi^2_{\rm{Delta}} / \chi^2_{\rm{King30}}$"):
     mag = cat['Z_ABS']
@@ -494,3 +575,36 @@ def plotColourDiagrams2(cat, colourColumn='Chi2DeltaKingDiv', label=r"$\chi^2_{\
 
     plt.tight_layout()
     fig.savefig("colour2.pdf", bbox_inches="tight")
+    
+    
+def getOptimalBinSize(x, x_min=None, x_max=None):
+
+    if x_max is None:
+        x_max = max(x)
+    if x_min is None:
+        x_min = min(x)
+    N_MIN = 4   #Minimum number of bins (integer)
+                #N_MIN must be more than 1 (N_MIN > 1).
+    N_MAX = 50  #Maximum number of bins (integer)
+    N = range(N_MIN,N_MAX) # #of Bins
+    N = np.array(N)
+    D = (x_max-x_min)/N    #Bin size vector
+    C = np.zeros(shape=(np.size(D),1))
+    
+    #Computation of the cost function
+    for i in xrange(np.size(N)):
+        edges = np.linspace(x_min,x_max,N[i]+1) # Bin edges
+        ki = np.histogram(x,edges) # Count # of events in bins
+        ki = ki[0]    
+        k = np.mean(ki) #Mean of event count
+        v = np.sum((ki-k)**2)/N[i] #Variance of event count
+        C[i] = (2*k-v)/((D[i])**2) #The cost Function
+    #Optimal Bin Size Selection
+    
+    cmin = np.min(C)
+    idx  = np.where(C==cmin)
+    idx = int(idx[0])
+    optD = D[idx]
+    
+    edges = np.linspace(x_min,x_max,N[idx]+1)
+    return edges

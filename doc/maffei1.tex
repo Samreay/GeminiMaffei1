@@ -36,8 +36,8 @@ Samuel Hinton$^{1,2}$,
 Ricardo Salinas$^{3}$% \thanks{E-mail: rsalinas@gemini.edu}, 
 Aaron J. Romanowsky$^{4,5}$, and maybe some others
 \\
-$^1$School of Mathematics and Physics, University of Queensland, QLD 4072, Australia \\
-$^2$Australian Astronomical Observatory, North Ryde, NSW 2113, Australia \\
+$^1$Australian Astronomical Observatory, North Ryde, NSW 2113, Australia \\
+$^2$School of Mathematics and Physics, University of Queensland, QLD 4072, Australia \\
 $^3$Gemini Observatory\\ 
 $^4$Department of Physics \& Astronomy, San Jos\'e
   State University, San Jose, CA 95192, USA\\ 
@@ -57,7 +57,7 @@ $^5$University of California Observatories,
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{abstract}
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed condimentum ipsum faucibus sem elementum, eu consectetur risus consectetur. Praesent quis aliquam risus. Vivamus interdum et eros gravida rhoncus. Proin accumsan finibus pellentesque. Praesent et erat eu velit maximus condimentum. Integer ornare vestibulum dolor nec pretium. Suspendisse suscipit, metus sed consectetur pretium, ligula nunc mollis quam, id dapibus est tortor et massa. Maecenas maximus elit orci, sit amet tincidunt libero ultrices a. Nullam sit amet condimentum libero. Duis ullamcorper lorem in nisi gravida tincidunt. Aliquam erat volutpat. Sed vitae sem a elit mattis porttitor.
+We have used imaging with the Subaru/Supreime-Cam search for and classify potential globular clusters in the nearby elliptical galaxy, Maffei 1. An area of $37'\times31'$, centered on Maffei 1, was searched in the $r'$, $i'$ and $z'$ bands in sub-arcsecond seeing, allowing larger GCs to be partially resolved. Visually identified candidates found from PSF subtracted photometry and artificially generated sources were used to train machine learning algorithms to select candidate extended objects, and physical cuts on colour, ellipticity and size were used to reduce the candidates list. With these cuts, we report 288 ``Class A'' and 432 ``Class B'' globular cluster candidates for spectroscopic follow-up, where ``Class A'' candidates represent a higher level of confidence in the candidate. The found candidates range from 2pc to 15pc in size, and show reddening in excess of the reddening found in Galactic globular clusters.
 \end{abstract}
 
 \begin{keywords}
@@ -236,7 +236,7 @@ Each candidate underwent aperture photometry on the fully reduced mosaics mentio
 
 
 
-In order to reduce the number of false positives given by the second classifier and select only primary candidates, several important selection cuts were put in place. An absolute magnitude cut was implemented to remove sources brighter than $M_{z'} = -12$, and a $\chi^2_{\rm{Delta}}/\chi^2_{\rm{King30}} >1$ cut removes objects better modelled as point sources. Objects with a King30 fhwm under 2pc (which corresponds to approximately half a pixel resolution of the object) or over 15pc  {\color{red} CITE}, where distances calculated using the distance of Maffei 1 to be 2.7Mpc, were excluded from the sample. Objects with high ellipticity, such that $\epsilon > 0.25$ were removed in an effort to lower misidentified galaxies {\color{red} CITE}. Finally, a colour profile cut was introduced,to remove extended objects which have highly varying colour over their radial profile, to remove some of the galaxy's classified as globular clusters. The cut was calculated by determining the median deviation in the colour profile of the PSF stars, and removing all extended objects that varied by more than five times this value. These cuts reduced the original catalog of 1159 candidate objects output by the machine learning algorithm to 720 candidates.
+In order to reduce the number of false positives given by the second classifier and select only primary candidates, several important selection cuts were put in place. An absolute magnitude cut was implemented to remove sources brighter than $M_{z'} = -12$, and a $\chi^2_{\rm{Delta}}/\chi^2_{\rm{King30}} >1$ cut removes objects better modelled as point sources. Objects with a King30 fhwm under 2pc (which corresponds to approximately half a pixel resolution of the object) or over 15pc, where distances calculated using the distance of Maffei 1 to be 2.7Mpc, were excluded from the sample. The maximal size cutoff was informed by the size distribution of known GCs presented in \citet{Harris2012}. Objects with high ellipticity, such that $\epsilon > 0.25$ were removed in an effort to lower misidentified galaxies, also following the distributions presented in \citet{Harris2012}. We present a more conservative cut than \citet{Harris2012}, which would not select extended clusters and ultra-compact dwarfs in the size ranges of 20-30 pc \citep{Evstigneeva2008,Huxor2005}. Finally, a colour profile cut was introduced,to remove extended objects which have highly varying colour over their radial profile, to remove some of the galaxy's classified as globular clusters. The cut was calculated by determining the median deviation in the colour profile of the PSF stars, and removing all extended objects that varied by more than five times this value. These cuts reduced the original catalog of 1159 candidate objects output by the machine learning algorithm to 720 candidates.
 
 \begin{figure*}
 	\centering
@@ -266,7 +266,11 @@ The list of output candidates were further separated into two categories, referr
 
  Comparing these colours to the colours of the globular clusters identified by CTIO instruments in \citet{Vanderbeke2014} shows a significant level of difference when taking all objects into account. The mean colours from \citet{Vanderbeke2014} are $\overline{r'-z'} = 0.44$, $\overline{r'-i'} = 0.29$ and $\overline{i'-z'} = 0.15$. In contrast, the mean colours for Class A candidates are $\overline{r'-z'} = 1.10$, $\overline{r'-i'} = 0.70$ and $\overline{i'-z'} = 0.40$, and the mean colours for Class B candidates are $\overline{r'-z'} = 1.26$, $\overline{r'-i'} = 0.80$ and $\overline{i'-z'} = 0.46$. The colours of the GC candidates are shown against their calculated absolute $z'$ magnitude in Figure \ref{fig:colour}.
  
- From the comparison, we see that the GC candidates for Maffei 1 are significantly redder than the GCs found in the Milky Way. This extra reddening was also found in the prior GC study of Maffei 1 by \citet{buta03}, who suggested that if the clusters are not obscured and variable extinction was not the primary source of reddening, that the difference could potentially be attributed to increase metallicity in Maffei 1 than the Milky Way. The candidates selected in this study reinforce the increased reddening of GCs in Maffei 1, and makes spectral analysis of mettalicity a key science goal for future analyses.
+ From the comparison, we see that the GC candidates for Maffei 1 are significantly redder than the GCs found in the Milky Way. The extra reddening of our GC candidates exceeds the reddening of 323 GCs found in the giant elliptical NGC5128 (Centaurus A) by \citet{Sinnott2010}, whose results give mean colours of $\overline{r'-z'} = 0.58$, $\overline{r'-i'} = 0.36$ and $\overline{i'-z'} = 0.22$.
+ 
+ This extra reddening was also found in the prior GC study of Maffei 1 by \citet{buta03}, who suggested that if the clusters are not obscured and variable extinction was not the primary source of reddening, that the difference could potentially be attributed to increase metallicity in Maffei 1 than the Milky Way. The candidates selected in this study reinforce the increased reddening of GCs in Maffei 1, and makes spectral analysis of mettalicity a key science goal for future analyses.
+ 
+ The candidates' colours as a function of absolute magnitude in the $z'$ band are shown in Figure \ref{fig:colour}. The colour distribution is shown in Figure \ref{fig:colourHist}. None of the distributions visually present strong signs of bimodality, however as prior studies in GCs have often shown bimodal distributions \citep{Dirsch2003, Salinas2015}, we analyse the bimodality rigorously using the Gaussian mixture modelling (\textsc{gmm}) implemented by \citet{Muratov2010}. Three main statistics are provided by \textsc{gmm} to distinguish between unimodal and bimodal distributions: a $p$-value representing the probability of attaining the same $\chi^2$ from a unimodal distribution, the kurtosis of the distribution $\kappa$ and the distance between the bimodal peaks $D \equiv \left| \mu_{\rm{blue}} - \mu_{\rm{red}}\right|/\left[ \left(\sigma^2_{\rm{blue}} + \sigma^2_{\rm{red}}\right)/2\right]^{0.5}$. As with \citet{Salinas2015} and \citet{Usher2012}, we utilise three necessary criterion for bimodality: $D>2$, $p$-value $ < 0.1$ and $\kappa < 0$. From this, we find no evidence of a bimodal distribution in the globular cluster candidates either for the Class A, Class B or total distributions.
  
  \begin{figure*}
  	\includegraphics[width=\textwidth]{images/colour.pdf}
@@ -275,9 +279,17 @@ The list of output candidates were further separated into two categories, referr
  \end{figure*}
  
  
-
+ 
+ \begin{figure}
+ 	\includegraphics[width=\columnwidth]{images/colourHist.pdf}
+ 	\caption{The colour distribution for all objects in total and when differentiated by class.}
+ 	\label{fig:colourHist}
+ \end{figure}
+ 
 \subsection{Globular cluster sizes}
 \label{sec:gc_sizes}
+
+The differentiation between Class A and Class B objects gives rise to distinct differences in size distributions of the candidates. This distribution is shown in Figure \ref{fig:kfwhmHist}, where we observe that Class A criteria preferentially select larger (and thus more extended) objects. Similarly, we observe that the brighter and more extended an object is, the higher the $\chi^2_R$ value gets (see Figure \ref{fig:kfwhm}). As brighter objects correspond to a higher signal to noise above the background, this result is entirely expected. More interestingly are the number of Class B objects which have low $\chi^2_R$ values despite a large fitted King profile fwhm. These represent either objects with low signal to noise and poor fits to both delta and King models, potentially overlapping objects, or highly elliptical objects which, whilst being extended, do not fit the symmetric King profile well.
 
 {\color{red} Talk about stuff in here. Ricardo, do you have a good citation for expected sizes of GCs? You said Harris?}
 
@@ -333,21 +345,21 @@ and AST-0909237.
 	\hline
 	ID & RA & DEC & $\epsilon$ & $M_{z'}$ & $m_{z'}$ & $r'-z'$ & King$_{30}$ FWHM (pc) \\
 	\hline
-	A1 & $2^{\rm{h}}\,38^{\rm{m}}\,21.5^{\rm{s}}$ & $59^\circ\,53'\,56.29''$ & 0.08 & -8.129 & 19.028 & 0.787 & 1.53 \\
-	A2 & $2^{\rm{h}}\,38^{\rm{m}}\,35.3^{\rm{s}}$ & $59^\circ\,53'\,40.45''$ & 0.14 & -8.592 & 18.565 & 0.878 & 2.05 \\
-	A3 & $2^{\rm{h}}\,38^{\rm{m}}\,8.8^{\rm{s}}$ & $59^\circ\,52'\,29.39''$ & 0.10 & -7.489 & 19.668 & 1.473 & 4.88 \\
-	A4 & $2^{\rm{h}}\,38^{\rm{m}}\,54.9^{\rm{s}}$ & $59^\circ\,52'\,15.67''$ & 0.22 & -9.047 & 18.109 & 1.198 & 2.80 \\
-	A5 & $2^{\rm{h}}\,38^{\rm{m}}\,12.9^{\rm{s}}$ & $59^\circ\,52'\,0.73''$ & 0.07 & -8.566 & 18.591 & 1.363 & 7.04 \\
-	A6 & $2^{\rm{h}}\,37^{\rm{m}}\,56.5^{\rm{s}}$ & $59^\circ\,51'\,57.60''$ & 0.25 & -8.745 & 18.412 & 1.410 & 4.10 \\
-	A7 & $2^{\rm{h}}\,38^{\rm{m}}\,36.6^{\rm{s}}$ & $59^\circ\,51'\,36.72''$ & 0.17 & -7.304 & 19.853 & 1.004 & 3.64 \\
-	A8 & $2^{\rm{h}}\,38^{\rm{m}}\,10.6^{\rm{s}}$ & $59^\circ\,50'\,18.02''$ & 0.20 & -7.064 & 20.093 & 1.281 & 3.84 \\
-	A9 & $2^{\rm{h}}\,38^{\rm{m}}\,10.7^{\rm{s}}$ & $59^\circ\,50'\,1.18''$ & 0.24 & -8.162 & 18.995 & 1.413 & 6.64 \\
-	A10 & $2^{\rm{h}}\,38^{\rm{m}}\,59.8^{\rm{s}}$ & $59^\circ\,49'\,49.22''$ & 0.24 & -7.652 & 19.504 & 0.985 & 2.71 \\
-	A11 & $2^{\rm{h}}\,38^{\rm{m}}\,37.2^{\rm{s}}$ & $59^\circ\,49'\,41.20''$ & 0.10 & -7.124 & 20.032 & 1.513 & 5.48 \\
-	A12 & $2^{\rm{h}}\,38^{\rm{m}}\,37.0^{\rm{s}}$ & $59^\circ\,49'\,37.06''$ & 0.16 & -6.805 & 20.352 & 1.459 & 10.54 \\
-	A13 & $2^{\rm{h}}\,38^{\rm{m}}\,27.5^{\rm{s}}$ & $59^\circ\,49'\,23.63''$ & 0.17 & -8.384 & 18.773 & 1.115 & 11.32 \\
-	A14 & $2^{\rm{h}}\,38^{\rm{m}}\,49.2^{\rm{s}}$ & $59^\circ\,48'\,49.93''$ & 0.11 & -8.415 & 18.742 & 0.920 & 9.81 \\
-	A15 & $2^{\rm{h}}\,38^{\rm{m}}\,43.5^{\rm{s}}$ & $59^\circ\,48'\,17.57''$ & 0.18 & -7.152 & 20.005 & 1.413 & 4.85 \\
+	A1 & $2^{\rm{h}}\,38^{\rm{m}}\,21.5^{\rm{s}}$ & $59^\circ\,53'\,56.29''$ & 0.08 & -8.129 & 19.028 & 0.787 & 1.5 \\
+	A2 & $2^{\rm{h}}\,38^{\rm{m}}\,35.3^{\rm{s}}$ & $59^\circ\,53'\,40.45''$ & 0.14 & -8.592 & 18.565 & 0.878 & 2.0 \\
+	A3 & $2^{\rm{h}}\,38^{\rm{m}}\,8.8^{\rm{s}}$ & $59^\circ\,52'\,29.39''$ & 0.10 & -7.489 & 19.668 & 1.473 & 4.9 \\
+	A4 & $2^{\rm{h}}\,38^{\rm{m}}\,54.9^{\rm{s}}$ & $59^\circ\,52'\,15.67''$ & 0.22 & -9.047 & 18.109 & 1.198 & 2.8 \\
+	A5 & $2^{\rm{h}}\,38^{\rm{m}}\,12.9^{\rm{s}}$ & $59^\circ\,52'\,0.73''$ & 0.07 & -8.566 & 18.591 & 1.363 & 7.0 \\
+	A6 & $2^{\rm{h}}\,37^{\rm{m}}\,56.5^{\rm{s}}$ & $59^\circ\,51'\,57.60''$ & 0.25 & -8.745 & 18.412 & 1.410 & 4.1 \\
+	A7 & $2^{\rm{h}}\,38^{\rm{m}}\,36.6^{\rm{s}}$ & $59^\circ\,51'\,36.72''$ & 0.17 & -7.304 & 19.853 & 1.004 & 3.6 \\
+	A8 & $2^{\rm{h}}\,38^{\rm{m}}\,10.6^{\rm{s}}$ & $59^\circ\,50'\,18.02''$ & 0.20 & -7.064 & 20.093 & 1.281 & 3.8 \\
+	A9 & $2^{\rm{h}}\,38^{\rm{m}}\,10.7^{\rm{s}}$ & $59^\circ\,50'\,1.18''$ & 0.24 & -8.162 & 18.995 & 1.413 & 6.6 \\
+	A10 & $2^{\rm{h}}\,38^{\rm{m}}\,59.8^{\rm{s}}$ & $59^\circ\,49'\,49.22''$ & 0.24 & -7.652 & 19.504 & 0.985 & 2.7 \\
+	A11 & $2^{\rm{h}}\,38^{\rm{m}}\,37.2^{\rm{s}}$ & $59^\circ\,49'\,41.20''$ & 0.10 & -7.124 & 20.032 & 1.513 & 5.5 \\
+	A12 & $2^{\rm{h}}\,38^{\rm{m}}\,37.0^{\rm{s}}$ & $59^\circ\,49'\,37.06''$ & 0.16 & -6.805 & 20.352 & 1.459 & 10.5 \\
+	A13 & $2^{\rm{h}}\,38^{\rm{m}}\,27.5^{\rm{s}}$ & $59^\circ\,49'\,23.63''$ & 0.17 & -8.384 & 18.773 & 1.115 & 11.3 \\
+	A14 & $2^{\rm{h}}\,38^{\rm{m}}\,49.2^{\rm{s}}$ & $59^\circ\,48'\,49.93''$ & 0.11 & -8.415 & 18.742 & 0.920 & 9.8 \\
+	A15 & $2^{\rm{h}}\,38^{\rm{m}}\,43.5^{\rm{s}}$ & $59^\circ\,48'\,17.57''$ & 0.18 & -7.152 & 20.005 & 1.413 & 4.8 \\
 	\hline
 \end{tabular}
 \end{table}
@@ -361,21 +373,21 @@ and AST-0909237.
 	\hline
 	ID & RA & DEC & $\epsilon$ & $M_{z'}$ & $m_{z'}$ & $r'-z'$ & King$_{30}$ FWHM (pc) \\
 	\hline
-	B1 & $2^{\rm{h}}\,38^{\rm{m}}\,21.8^{\rm{s}}$ & $59^\circ\,54'\,6.98''$ & 0.07 & -9.366 & 17.791 & 0.542 & 1.50 \\
-	B2 & $2^{\rm{h}}\,38^{\rm{m}}\,34.3^{\rm{s}}$ & $59^\circ\,53'\,54.82''$ & 0.14 & -7.504 & 19.653 & 0.882 & 1.65 \\
-	B3 & $2^{\rm{h}}\,38^{\rm{m}}\,24.4^{\rm{s}}$ & $59^\circ\,53'\,55.50''$ & 0.06 & -8.417 & 18.740 & 1.397 & 1.10 \\
-	B4 & $2^{\rm{h}}\,38^{\rm{m}}\,9.8^{\rm{s}}$ & $59^\circ\,53'\,53.52''$ & 0.18 & -6.700 & 20.457 & 2.455 & 2.57 \\
-	B5 & $2^{\rm{h}}\,38^{\rm{m}}\,18.8^{\rm{s}}$ & $59^\circ\,53'\,44.20''$ & 0.07 & -6.736 & 20.421 & 1.523 & 1.73 \\
-	B6 & $2^{\rm{h}}\,38^{\rm{m}}\,31.3^{\rm{s}}$ & $59^\circ\,53'\,26.38''$ & 0.22 & -8.385 & 18.771 & 1.104 & 1.24 \\
-	B7 & $2^{\rm{h}}\,38^{\rm{m}}\,32.5^{\rm{s}}$ & $59^\circ\,53'\,25.22''$ & 0.10 & -7.226 & 19.930 & 1.138 & 1.30 \\
-	B8 & $2^{\rm{h}}\,38^{\rm{m}}\,32.4^{\rm{s}}$ & $59^\circ\,53'\,13.24''$ & 0.12 & -7.514 & 19.643 & 0.783 & 1.15 \\
-	B9 & $2^{\rm{h}}\,38^{\rm{m}}\,38.0^{\rm{s}}$ & $59^\circ\,53'\,9.82''$ & 0.15 & -6.978 & 20.179 & 1.433 & 1.76 \\
-	B10 & $2^{\rm{h}}\,38^{\rm{m}}\,40.3^{\rm{s}}$ & $59^\circ\,52'\,48.79''$ & 0.08 & -7.886 & 19.271 & 1.446 & 1.18 \\
-	B11 & $2^{\rm{h}}\,38^{\rm{m}}\,6.6^{\rm{s}}$ & $59^\circ\,52'\,39.65''$ & 0.10 & -6.025 & 21.132 & 0.989 & 6.32 \\
-	B12 & $2^{\rm{h}}\,37^{\rm{m}}\,57.0^{\rm{s}}$ & $59^\circ\,52'\,25.79''$ & 0.19 & -7.786 & 19.371 & 1.074 & 3.35 \\
-	B13 & $2^{\rm{h}}\,38^{\rm{m}}\,52.6^{\rm{s}}$ & $59^\circ\,51'\,58.57''$ & 0.10 & -7.557 & 19.600 & 1.425 & 1.56 \\
-	B14 & $2^{\rm{h}}\,38^{\rm{m}}\,54.5^{\rm{s}}$ & $59^\circ\,51'\,57.06''$ & 0.18 & -8.685 & 18.471 & 1.369 & 4.42 \\
-	B15 & $2^{\rm{h}}\,38^{\rm{m}}\,47.3^{\rm{s}}$ & $59^\circ\,51'\,40.07''$ & 0.11 & -7.853 & 19.304 & 0.575 & 1.24 \\
+	B1 & $2^{\rm{h}}\,38^{\rm{m}}\,21.8^{\rm{s}}$ & $59^\circ\,54'\,6.98''$ & 0.07 & -9.366 & 17.791 & 0.542 & 1.5 \\
+	B2 & $2^{\rm{h}}\,38^{\rm{m}}\,34.3^{\rm{s}}$ & $59^\circ\,53'\,54.82''$ & 0.14 & -7.504 & 19.653 & 0.882 & 1.6 \\
+	B3 & $2^{\rm{h}}\,38^{\rm{m}}\,24.4^{\rm{s}}$ & $59^\circ\,53'\,55.50''$ & 0.06 & -8.417 & 18.740 & 1.397 & 1.1 \\
+	B4 & $2^{\rm{h}}\,38^{\rm{m}}\,9.8^{\rm{s}}$ & $59^\circ\,53'\,53.52''$ & 0.18 & -6.700 & 20.457 & 2.455 & 2.6 \\
+	B5 & $2^{\rm{h}}\,38^{\rm{m}}\,18.8^{\rm{s}}$ & $59^\circ\,53'\,44.20''$ & 0.07 & -6.736 & 20.421 & 1.523 & 1.7 \\
+	B6 & $2^{\rm{h}}\,38^{\rm{m}}\,31.3^{\rm{s}}$ & $59^\circ\,53'\,26.38''$ & 0.22 & -8.385 & 18.771 & 1.104 & 1.2 \\
+	B7 & $2^{\rm{h}}\,38^{\rm{m}}\,32.5^{\rm{s}}$ & $59^\circ\,53'\,25.22''$ & 0.10 & -7.226 & 19.930 & 1.138 & 1.3 \\
+	B8 & $2^{\rm{h}}\,38^{\rm{m}}\,32.4^{\rm{s}}$ & $59^\circ\,53'\,13.24''$ & 0.12 & -7.514 & 19.643 & 0.783 & 1.2 \\
+	B9 & $2^{\rm{h}}\,38^{\rm{m}}\,38.0^{\rm{s}}$ & $59^\circ\,53'\,9.82''$ & 0.15 & -6.978 & 20.179 & 1.433 & 1.8 \\
+	B10 & $2^{\rm{h}}\,38^{\rm{m}}\,40.3^{\rm{s}}$ & $59^\circ\,52'\,48.79''$ & 0.08 & -7.886 & 19.271 & 1.446 & 1.2 \\
+	B11 & $2^{\rm{h}}\,38^{\rm{m}}\,6.6^{\rm{s}}$ & $59^\circ\,52'\,39.65''$ & 0.10 & -6.025 & 21.132 & 0.989 & 6.3 \\
+	B12 & $2^{\rm{h}}\,37^{\rm{m}}\,57.0^{\rm{s}}$ & $59^\circ\,52'\,25.79''$ & 0.19 & -7.786 & 19.371 & 1.074 & 3.3 \\
+	B13 & $2^{\rm{h}}\,38^{\rm{m}}\,52.6^{\rm{s}}$ & $59^\circ\,51'\,58.57''$ & 0.10 & -7.557 & 19.600 & 1.425 & 1.6 \\
+	B14 & $2^{\rm{h}}\,38^{\rm{m}}\,54.5^{\rm{s}}$ & $59^\circ\,51'\,57.06''$ & 0.18 & -8.685 & 18.471 & 1.369 & 4.4 \\
+	B15 & $2^{\rm{h}}\,38^{\rm{m}}\,47.3^{\rm{s}}$ & $59^\circ\,51'\,40.07''$ & 0.11 & -7.853 & 19.304 & 0.575 & 1.2 \\
 	\hline
 \end{tabular}
 \end{table}
