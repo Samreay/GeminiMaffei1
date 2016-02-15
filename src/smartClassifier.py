@@ -73,7 +73,7 @@ class SmartClassifier(object):
         w = catalog["WEIGHT"]
         return x,y,w
         
-    def getBestClassifier(self, highPrecision=True):
+    def getBestClassifier(self, highPrecision=True, plotOnly=False):
         boosts = [1,2,5,10]#,15,20]#,30]#,40]#60,100]#,40,50,70]
         weights = [5,6,7]#,6,8]#,8,10,12,16]#,64]#,128]#,12,16,24,32]
         if highPrecision:
@@ -94,29 +94,33 @@ class SmartClassifier(object):
 
         validate = self.catalog[numTrain+numTest:]
         
+        if not plotOnly:
         
-        for boost in boosts:
-            for i in range(1,maxDepth+1):
-                for w in weights:
-                    x,y,weight = self.getXYW(train)
-                    sw = np.min(np.vstack((train['HLR']/6.0, np.ones(train.shape))), axis=0)**2
-                    weight = 1.0*(1-y)+(w-1)*y*sw + 200.0*weight
-                    classifier = AdaBoostClassifier(DecisionTreeClassifier(max_depth=i), algorithm="SAMME", n_estimators=boost)
-                    classifiers.append(classifier)
-                    classifier.fit(x,y, sample_weight=weight)
-                    evaluated = self.evaluate(classifier, validate)
-                    evals.append(evaluated)
-                    label = "BDT,  D=%d,  B=%2d,  W=%2d,  MCC=%0.4f" % (i,boost,w, evaluated)
-                    print(label)
-                    sys.stdout.flush()
-                    labels.append(label)
-                    
-        evals = np.array(evals)
-        print(evals)
-        bestClassifierIndex = evals.argmax()
-        bestClassifier = classifiers[bestClassifierIndex]
-        bestLabel = labels[bestClassifierIndex]
-        print(bestLabel)
+            for boost in boosts:
+                for i in range(1,maxDepth+1):
+                    for w in weights:
+                        x,y,weight = self.getXYW(train)
+                        sw = np.min(np.vstack((train['HLR']/6.0, np.ones(train.shape))), axis=0)**2
+                        weight = 1.0*(1-y)+(w-1)*y*sw + 200.0*weight
+                        classifier = AdaBoostClassifier(DecisionTreeClassifier(max_depth=i), algorithm="SAMME", n_estimators=boost)
+                        classifiers.append(classifier)
+                        classifier.fit(x,y, sample_weight=weight)
+                        evaluated = self.evaluate(classifier, validate)
+                        evals.append(evaluated)
+                        label = "BDT,  D=%d,  B=%2d,  W=%2d,  MCC=%0.4f" % (i,boost,w, evaluated)
+                        print(label)
+                        sys.stdout.flush()
+                        labels.append(label)
+                        
+            evals = np.array(evals)
+            print(evals)
+            bestClassifierIndex = evals.argmax()
+            bestClassifier = classifiers[bestClassifierIndex]
+            bestLabel = labels[bestClassifierIndex]
+            print(bestLabel)
+        else:
+            bestClassifier = self.classifier
+            bestLabel = ""
         self._testClassifier(bestClassifier, test, bestLabel, self.other)
         return bestClassifier
         
@@ -132,7 +136,7 @@ class SmartClassifier(object):
         
         extendedMags = other[:,2]
         extendedHLRs = other[:,3]
-        magOffset = 0.52434749611761644
+        magOffset = 2.6 + 2.082443
         minMag = max(extendedMags.min(), 11)+magOffset
         maxMag = min(extendedMags.max(), 17)+magOffset
         minHLR = max(extendedHLRs.min(),1)
@@ -159,7 +163,7 @@ class SmartClassifier(object):
         self.hlrs = 0.5*(xedg[1:]+xedg[:-1])
         self.mags = 0.5*(yedg[1:]+yedg[:-1])
         if self.debugPlot:
-            fig = plt.figure(figsize=(6,6))
+            fig = plt.figure(figsize=(5,5))
             ax0 = fig.add_subplot(1,1,1)
             ax0.invert_yaxis()
             plt.tight_layout()
@@ -173,10 +177,13 @@ class SmartClassifier(object):
             #cax = divider.append_axes("right", size="5%", pad=0.05)
             #cb = plt.colorbar(h1, cax = cax)
             cb = plt.colorbar(h1,fraction=0.046, pad=0.03)
-            cb.set_label(r"$\rm{Probability}$", fontsize=18)
-            fig.savefig("classifier_%s.pdf"%self.name, bbox_inches="tight")
+            cb.set_label(r"$\rm{Probability}$", fontsize=16)
+            fig.savefig("../doc/images/classifier_%s.pdf"%self.name, bbox_inches="tight")
             np.save("classifier_%s.npy"%self.name, hRatio)
             plt.show()
+            
+            fig.set_size_inches((4,4))
+            fig.savefig("classifier_%s.png"%self.name, bbox_inches="tight", transparent=True, dpi=300)
             
         
         

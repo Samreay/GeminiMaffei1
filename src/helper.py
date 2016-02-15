@@ -29,9 +29,12 @@ import stat
 import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
 from matplotlib.legend_handler import HandlerLine2D
+from scipy.interpolate import interp1d
 
 
 from matplotlib import ticker
+
+from scipy.optimize import curve_fit
 
 
 def showInDS9(fitsFile, catalog=None, cols=['X_IMAGE','Y_IMAGE']):
@@ -125,6 +128,25 @@ def latexPrint(catalog,label, columns=['RA','DEC','ELLIPTICITY','Z_ABS', 'Z_MAG'
     string += "\\hline\n\\end{tabular}"
     return string
         
+def getMZ():
+    V = 6.47
+    B = 7.35
+    I = 5.41
+    g = V + 0.60*(B-V) - 0.12
+    r = V - 0.42*(B-V) + 0.11
+    
+    gg = 7.043
+    rr = 6.244
+    zz = 5.641
+    ggmzz = gg - zz
+    rrmzz = rr - zz
+    
+    z1 = gg - ggmzz
+    z2 = rr - rrmzz
+    res = np.mean(np.array([z1,z2]))
+    print(res)
+    return res
+    
 def getZcal(z):
     pz = -2.082443#-2.193601 #
     return z - pz
@@ -430,6 +452,7 @@ def plotColourHistogram(cat, classA):
     #ax0.margins(0.05, 0.01)
     plt.tight_layout()
     fig.savefig("colourHist.pdf", bbox_inches="tight")
+    fig.savefig("colourHist.png", bbox_inches="tight", transparent=True, dpi=300)
 
     #fig.savefig("sizeHist.png", bbox_inches="tight", dpi=300, transparent=True)
     
@@ -576,6 +599,108 @@ def plotColourDiagrams2(cat, colourColumn='Chi2DeltaKingDiv', label=r"$\chi^2_{\
     plt.tight_layout()
     fig.savefig("colour2.pdf", bbox_inches="tight")
     
+def f(m, maxv, alpha, m50):
+        return maxv * (1 - ((alpha * (m - m50))/(np.sqrt(1 + alpha * alpha * (m - m50) * (m - m50)))))
+        
+def fitCompleteness(classifier):
+    
+    
+
+    xdata = classifier.sc.mags
+    ydata = np.mean(classifier.sc.hRatio, axis=0)
+    
+    popt, pcov = curve_fit(f, xdata, ydata, p0=[0.4,1.5,15])
+    
+    fig, ax0 = plt.subplots(figsize=(5,4))
+    ax0.set_xlabel("$z'$", fontsize=16)
+    ax0.set_ylabel(r"$\rm{Completeness}$", fontsize=16)
+    
+    xdiff = np.diff(xdata)
+    b1 = xdata[:-1] - xdiff*0.5
+    b2 = np.array([xdata[-1]+xdiff[-1]*0.5])
+    
+    bine = np.concatenate((b1,b2))
+    print(bine)
+    
+    ax0.plot(xdata, ydata, 'b-', linewidth=2, label="Classifier 2")
+    #ax0.hist(xdata, bins=bine, weights=ydata, linewidth=2, histtype='step', label="Classifier 2")
+    
+    #x50 = interp1d(ydata,xdata)(0.5)
+    #print(x50)
+    
+    yfit = f(xdata, *popt)
+    ax0.plot(xdata, yfit, 'r--', linewidth=2,label="Fit")
+    
+    ax0.legend(loc=3)
+    
+    fig.savefig("../doc/images/completeness.pdf", bbox_inches='tight')
+    
+    return popt, pcov
+
+
+def getSigmaZ(mz,mu):
+    return 1.07 - 0.1 * (mz - mu + 22)
+    
+def getM0(mz, mu):
+    return (-7.66 + 0.04 * (mz - mu)) + mu
+    
+def getMagnitudeInfo(zabs, maxv, alpha, m50):
+
+    fig,ax0 = plt.subplots(figsize=(5,4))
+    ax0.set_xlabel("$z'$", fontsize=16)
+    ax0.set_ylabel("$N$", fontsize=16)
+    
+    bins = 20
+    hist, be = np.histogram(zabs, bins=bins)
+    bc = 0.5 * (be[:-1] + be[1:])
+    xdata = bc
+    adj = f(xdata, maxv, alpha, m50)
+    good = adj > 0.3
+    print(adj)
+    
+    hist2 = (hist / adj)
+    hist3 = hist2[good]
+    xdata2 = xdata[good]
+    mz = getMZ()
+    mu = 27.39
+    def ff(m, a0):
+        sigmam = getSigmaZ(mz, mu)
+        m0 = getM0(mz, mu)
+        return (a0 / ((np.sqrt(2*np.pi)) * sigmam)) * np.exp(-(m - m0)*(m - m0)/(2*sigmam*sigmam))
+    
+    popt, pcov = curve_fit(ff, xdata2, hist3, p0=[2500])
+    print(popt)
+    print(pcov)
+    a0 = popt[0]
+    x = np.linspace(xdata.min(), xdata.max(), 100)
+    yfit = ff(x, *popt)
+
+    #yfunct = (a0 / ((np.sqrt(2*np.pi)) * sigmam)) * np.exp(-(x - m0)*(x - m0)/(2*sigmam*sigmam) )
+    #print(xdata, yfit)
+    
+    ax0.hist(bc, bins=be, weights=hist, histtype='step', linewidth=1, label="Observed distribution")
+    #ax0.hist(xdata, bins=be, weights=hist2, histtype='step', linewidth=1, label="Corrected distribution")
+    ax0.hist(xdata2, bins=be, weights=hist3, histtype='step', linewidth=1, label="Corrected distribution")
+    ax0.plot(x, yfit, 'r--', label="Observed model")
+    #ax0.plot(x, yfunct, 'r', label="Underlying distribution")
+    #ax0.plot(xdata, 70*(1 - (alpha * (xdata - m50)) / np.sqrt(1 + alpha * alpha * (xdata - m50) * (xdata - m50))), ls="--")
+    ax0.legend(loc=2)
+
+def updateRaAndDec(g, cat):
+    t = 1.5 / (3600.)
+    g = g.copy()
+    for i,row in enumerate(g):
+        ra = row['RA']
+        dec = row['DEC']
+        
+        dists = np.sqrt( (cat['X_WORLD']-ra)*(cat['X_WORLD']-ra) + (cat['Y_WORLD']-dec)*(cat['Y_WORLD']-dec))
+        minDist = dists.argmin()
+        if (dists[minDist] < t):
+            row['RA'] = cat['X_WORLD'][minDist]
+            row['DEC'] = cat['Y_WORLD'][minDist]
+        else:
+            print(dists[minDist]*3600)
+    return g
     
 def getOptimalBinSize(x, x_min=None, x_max=None):
 

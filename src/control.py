@@ -9,12 +9,15 @@ from numpy.lib.recfunctions import append_fields
 
 tempParentDir = "../temp"
 tileDir = "../resources/tiles"
+mosaicWCSDir = "../resources/mosaicWCS"
 mosaicDir = "../resources/mosaic"
 view = r"/Users/shinton/Documents/backup/GeminiMaffei1/resources/mosaicZSub.fits"
-'''
 
+'''
 classifier = Classifier("../resources/classified", tempParentDir=tempParentDir, debugPlot=True)
 classifier.getClassifiers()
+classifier.sc.getBestClassifier(plotOnly=True)
+classifier.sc2.getBestClassifier(plotOnly=True)
 
 
 tiles = [Tile(os.path.abspath(tileDir + os.sep + f), classifier, tempParentDir=tempParentDir) for f in os.listdir(tileDir) if os.path.isfile(tileDir + os.sep + f) and f.endswith(".fits")]
@@ -102,10 +105,20 @@ print("g",gccf.shape)
 
 
 
-allS = m.cat.copy()
-allS = getDists(allS)
-g = getDists(gccf)
 
+
+
+
+allS = mosaicZ[0].cat.copy()
+allS = getDists(allS)
+gg = getDists(gccf)
+
+mosaicWCS = [Mosaic(os.path.abspath(mosaicWCSDir + os.sep + f), tempParentDir=tempParentDir) for f in os.listdir(mosaicWCSDir) if f.endswith(".fits")]
+mosaicCats = [m.getCatalog(m.fitsPath, world=True) for m in mosaicWCS]
+'''
+g = updateRaAndDec(gg, mosaicCats[0])
+
+'''
 classA = g['Chi2DeltaKingDiv'] > 1.5
 classB = ~classA
 
@@ -115,7 +128,7 @@ np.savetxt("classB.txt",g[classB][['RA','DEC']])
 print(classA.sum())
 print(classB.sum())
 
-'''
+
 
 #plotDist(g, allS)
 
@@ -125,12 +138,20 @@ for c in colors:
     plotColourDiagrams(g, classA,colourColumn=c)    
     #plotColourDiagrams2(g, colourColumn=c)    
 
-plotSizeDiagrams(g, classA)    
+plotSizeDiagrams(g, classA)
+'''
 
-#plotSizeHistogram(g, classA)
+'''
+plotSizeHistogram(g, classA)
+plotSizeHistogram2(g, classA)
+plotColourHistogram(g, classA)
+'''
+#popt, pcov = fitCompleteness(classifier)
+#getMagnitudeInfo(g['Z_MAG'], popt[0], popt[1], popt[2])
 
 
 '''
+
 print(latexPrint(g[classA][:15], "A"))
 print("\n\n---\n\n")
 print(latexPrint(g[classB][:15], "B"))

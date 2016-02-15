@@ -66,7 +66,7 @@ class Reducer(object):
         self.tempDirSetup = True
         self._debug("Generating temp directory at %s for classifier" % self.tempDir)
 
-    def getCatalog(self, fitsPath, ishape=False, excluded=None, aperture=False):
+    def getCatalog(self, fitsPath, ishape=False, excluded=None, aperture=False, world=False):
         self.name = os.path.splitext(os.path.basename(fitsPath))[0]
         catalogOutFile = self.outDir + os.sep + self.name + ("_ishape_" if ishape else "") + "Cat.npy"
         if not self.redo and os.path.exists(catalogOutFile):
@@ -85,13 +85,13 @@ class Reducer(object):
         imageOriginal = fits.getdata(path)
         mask, imageMasked = self.getMaskedImage(imageOriginal)
         imageSubtracted = self.getBackground(imageMasked)
-        catalog, sex = self._getCatalogs(fitsPath, imageSubtracted,aperture=aperture)
+        catalog, sex = self._getCatalogs(fitsPath, imageSubtracted,aperture=aperture,world=world)
         if excluded is not None:
             self._debug("Removing %d excluded sources. Had %d sources."%(excluded.shape[0],catalog.shape[0]))
             catalog = catalog[~self._getCandidateMask(catalog, excluded[['X_IMAGE','Y_IMAGE']].view(np.float64).reshape(excluded.shape + (-1,)))]
             self._debug("Went to %d sources"%catalog.shape[0])
         catalogTrimmed = self.trimCatalog(catalog, imageOriginal, mask, sex, aperture=aperture)
-        if not aperture:
+        if not aperture and not world:
             catalogFinal = self.normaliseRadial(catalogTrimmed, sex)
         else:
             catalogFinal = catalogTrimmed
@@ -225,13 +225,13 @@ class Reducer(object):
     
         return catalogFinal
         
-    def _getCatalogs(self, fitsPath, image, pixelThreshold=2, aperture=False):
+    def _getCatalogs(self, fitsPath, image, pixelThreshold=2, aperture=False, world=False):
         self._debug("Getting objects using sextractor")
         tempFits = os.path.abspath(self.tempDir + os.sep + "temp_%s"%self.name)
         
         fitsFile = fits.open(fitsPath)
         if image is not None:
-            fitsFile[0].data = image
+            fitsFile[0].data = image.astype(np.float32)
         fitsFile.writeto(tempFits, clobber=True)
         fitsFile.close()
         
@@ -240,7 +240,10 @@ class Reducer(object):
             sex = self.getApertureSextractor()
             sex.config['FILTER_MASK'] = filters['gauss_3.0_7x7']
         else:
-            sex = self.getSextractor()
+            if world:
+                sex = self.getSextractorWorld()
+            else:
+                sex = self.getSextractor()
             sex.config['FILTER_MASK'] = filters['gauss_3.0_7x7']
         self._debug("Running sextractor using gaussian filter")
         data1 = sex.run(tempFits, path=sexPath, cwd=self.tempDir)
@@ -391,6 +394,18 @@ class Reducer(object):
         for (key, value) in kwargs.iteritems():
             sex.config[key] = value
         return sex    
+        
+    def getSextractorWorld(self, **kwargs):
+        sex = self.getDefaultSextractor()
+        sex.config['PHOT_APERTURES'] = [3]
+        sex.config['CHECKIMAGE_TYPE'] = ["NONE"]
+        sex.config['CHECKIMAGE_NAME'] = []
+        sex.config['PARAMETERS_LIST'] = ['NUMBER', 'X_IMAGE', 'Y_IMAGE', 'X_WORLD', 'Y_WORLD'] + ['MAG_APER(%d)'%(i+1) for i in range(len(sex.config['PHOT_APERTURES']))] + ['FLUX_MAX', 'FLUX_AUTO', 'MAG_AUTO']
+        for (key, value) in kwargs.iteritems():
+            sex.config[key] = value
+        return sex  
+        
+        
         
         
     def getMaskedImage(self, imageStart):
