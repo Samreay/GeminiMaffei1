@@ -27,6 +27,7 @@ from sklearn.tree import DecisionTreeClassifier
 import subprocess
 import stat
 
+from numpy.lib.recfunctions import append_fields
 
 
 from astroquery.irsa_dust import IrsaDust
@@ -148,5 +149,6 @@ class Dust(object):
             colsToFix = [n for n in names if n.find("%s_"%b) == 0 and n.find("MAGE") == -1 and n.find("MASK") == -1 ]
             self._debug("\tFixing %s"%colsToFix)
             for col in colsToFix:
+                cat = append_fields(cat, '%s_ORIGINAL'%col, cat[col], usemask=False)
                 cat[col] -= ext[:,i]
         return cat

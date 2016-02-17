@@ -102,7 +102,7 @@ def addFWHM(cat):
     return cat
 
     
-def latexPrint(catalog,label, columns=['RA','DEC','ELLIPTICITY','Z_ABS', 'Z_MAG','RMZ_11', 'KFWHM'], labels=["RA","DEC",r"$\epsilon$","$M_{z'}$","$m_{z'}$","$r'-z'$", 'King$_{30}$ FWHM (pc)'], positions=["l","l","c","c","c","c","c"], formats=["%s","%s", "%0.2f","%0.3f","%0.3f","%0.3f","%0.1f"]):
+def latexPrint(catalog,label, columns=['RA','DEC','ELLIPTICITY','Z_ABS', 'Z_MAG','RMZ_11', 'KFWHM', 'KingFWHM'], labels=["RA","DEC",r"$\epsilon$","$M_{z'}$","$m_{z'}$","$r'-z'$", 'King$_{30}$ FWHM (pc)','King$_{30}$ FWHM (px)'], positions=["l","l","c","c","c","c","c","c"], formats=["%s","%s", "%0.2f","%0.3f","%0.3f","%0.3f","%0.1f", "%0.2f"]):
     from astropy import units as u
     from astropy.coordinates import SkyCoord
     
@@ -182,13 +182,17 @@ mosaicRTime = 10#75
 mosaicITime = 10#27
 def addColourDiff(catalog):
     cat = catalog.copy()
-    apertures = [int(n[n.find("_")+1:]) for n in cat.dtype.names if n.find("R_") != -1]
+    apertures = [int(n[n.find("_")+1:]) for n in cat.dtype.names if n.find("R_") != -1 and "ORIGINAL" not in n]
     if 'Z_MAG' in cat.dtype.names:
         cat['Z_MAG'] += 2.5*np.log10(mosaicZTime)
         cat['Z_MAG'] = getZcal(cat['Z_MAG'])
-        cat['Z_MAG'] += correctZAirMass(1.6434 - 1.31)
-
-        cat = append_fields(cat, 'Z_ABS', getAbsolute(cat['Z_MAG']), usemask=False)    
+        #cat['Z_MAG'] += correctZAirMass(1.6434 - 1.31)
+        cat = append_fields(cat, 'Z_ABS', getAbsolute(cat['Z_MAG']), usemask=False)
+        
+    if 'Z_MAG_ORIGINAL' in cat.dtype.names:
+        cat['Z_MAG_ORIGINAL'] += 2.5*np.log10(mosaicZTime)
+        cat['Z_MAG_ORIGINAL'] = getZcal(cat['Z_MAG_ORIGINAL'])
+        #cat['Z_MAG_ORIGINAL'] += correctZAirMass(1.6434 - 1.31)
 
     for ap in apertures:
         z = "Z_%d"%ap
@@ -196,15 +200,15 @@ def addColourDiff(catalog):
         i = "I_%d"%ap
         cat[z] = getZcal(cat[z])
         cat[z] += 2.5 * np.log10(mosaicZTime)
-        cat[z] += correctZAirMass(1.6434 - 1.31)
+        #cat[z] += correctZAirMass(1.6434 - 1.31)
 
         cat[r] = getRcal(cat[r])
-        cat[r] += correctRAirMass(1.5659 - 1.303)
+        #cat[r] += correctRAirMass(1.5659 - 1.303)
         cat[r] += 2.5 * np.log10(mosaicRTime)
         
         cat[i] = getIcal(cat[i])
         cat[i] += 2.5 * np.log10(mosaicITime)
-        cat[i] += correctIAirMass(1.1082 - 1.32)
+        #cat[i] += correctIAirMass(1.1082 - 1.32)
 
 
     
@@ -307,7 +311,43 @@ def plotColourDifference(cat, psfs, number=20, threshold=3):
 def getAbsolute(apparent, distance=2.7e6):
     return apparent - 2.5 * np.log10((distance/10)**2)
                 
-                
+def plotSizeDiagrams2(cat, classA):
+    label=r"$\chi^2_{\rm{Delta}} / \chi^2_{\rm{King30}}$"
+    fig, ax0 = plt.subplots(figsize=(5,4.5))
+    ax0.invert_yaxis()
+    
+    y = cat['Z_MAG_ORIGINAL']
+    x = cat['KFWHM']
+    c = cat['Chi2DeltaKingDiv']
+    mask = cat['Z_MASK']
+    vmin = 1
+    vmax = 3
+    cmap = 'viridis'
+
+    h1 = ax0.scatter(x[mask & ~classA], y[mask & ~classA], c=c[mask & ~classA],edgecolor="none", cmap=cmap,vmin=vmin, vmax=vmax, marker=">", label="Class B") # 
+    h1 = ax0.scatter(x[mask & classA], y[mask & classA], c=c[mask & classA],edgecolor="none", cmap=cmap,vmin=vmin, vmax=vmax, label="Class A") # 
+    ax0.set_ylabel(r"$z'$", fontsize=16)
+    ax0.set_xlabel(r"$\rm{King30\ FWHM\ (pc)}$", fontsize=16)
+    
+    caa = mlines.Line2D([], [], color='#69CF37', markeredgecolor='#69CF37', linewidth=0, marker='o', linestyle='none', markersize=8, label='Class A')
+    cbb = mlines.Line2D([], [], color='#1B737B', markeredgecolor='#1B737B', linewidth=0, marker='>', linestyle='none', markersize=8, label='Class B')
+    ax0.legend(handler_map={caa: HandlerLine2D(numpoints=1), cbb: HandlerLine2D(numpoints=1)}, handles=[caa, cbb]) #)
+
+    divider = make_axes_locatable(ax0)
+    cax = divider.append_axes("right", size="5%", pad=0.05)
+    cb = plt.colorbar(h1, cax = cax, ticks=[1, 1.5, 2,2.5, 3])  
+    cb.set_label(label, fontsize=16)
+    
+    ax0.locator_params(nbins=6)
+    ax0.axis('tight')
+    #cax.locator_params(nbins=6)
+    plt.tight_layout()
+    fig.savefig("apparent.pdf", bbox_inches="tight")
+    fig.set_size_inches(3.5, 3)
+    ax0.legend(handler_map={caa: HandlerLine2D(numpoints=1), cbb: HandlerLine2D(numpoints=1)}, frameon=False, borderpad=0, labelspacing=0, columnspacing=0, handles=[caa, cbb],bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
+           ncol=2, mode="expand", borderaxespad=0.) #)
+    fig.savefig("apparent.png", transparent=True, bbox_inches="tight", dpi=300)
+            
 def plotSizeDiagrams(cat, classA):
     label=r"$\chi^2_{\rm{Delta}} / \chi^2_{\rm{King30}}$"
     fig, ax0 = plt.subplots(figsize=(5,4.5))
@@ -622,14 +662,14 @@ def fitCompleteness(classifier):
     bine = np.concatenate((b1,b2))
     print(bine)
     
-    ax0.plot(xdata, ydata, 'b-', linewidth=2, label="Classifier 2")
+    ax0.plot(xdata, ydata, 'b-', linewidth=2, label="Classifier")
     #ax0.hist(xdata, bins=bine, weights=ydata, linewidth=2, histtype='step', label="Classifier 2")
     
     #x50 = interp1d(ydata,xdata)(0.5)
     #print(x50)
     
     yfit = f(xdata, *popt)
-    ax0.plot(xdata, yfit, 'r--', linewidth=2,label="Fit")
+    ax0.plot(xdata, yfit, 'r--', linewidth=2,label="Model fit")
     
     ax0.legend(loc=3)
     
@@ -662,29 +702,43 @@ def getMagnitudeInfo(zabs, maxv, alpha, m50):
     hist3 = hist2[good]
     xdata2 = xdata[good]
     mz = getMZ()
-    mu = 27.39
-    def ff(m, a0):
-        sigmam = getSigmaZ(mz, mu)
-        m0 = getM0(mz, mu)
+    def ff(m, a0, m0, sigmam):
+        #sigmam = getSigmaZ(mz, mu)
+        #m0 = getM0(mz, mu)
         return (a0 / ((np.sqrt(2*np.pi)) * sigmam)) * np.exp(-(m - m0)*(m - m0)/(2*sigmam*sigmam))
+        
     
-    popt, pcov = curve_fit(ff, xdata2, hist3, p0=[2500])
+    
+    popt, pcov = curve_fit(ff, xdata2, hist3, p0=[314, 20, 1])
     print(popt)
-    print(pcov)
+    print(np.sqrt(pcov))
     a0 = popt[0]
+    m0 = popt[1]
+    sigmam = popt[2]
+    mu1 = (m0 + 7.66 - 0.04 * mz) / 0.96
+    mu2 = (sigmam - 1.07) * 10 + mz + 22
+    mu3 = 0.5 * (mu1 + mu2)
+
+    print(mu1)
+    print(mu2)
+    print(mu3)
+    print(np.power(10, mu1/5 + 1))
+    print(np.power(10, mu2/5 + 1))
+    print(np.power(10, mu3/5 + 1))
     x = np.linspace(xdata.min(), xdata.max(), 100)
     yfit = ff(x, *popt)
 
     #yfunct = (a0 / ((np.sqrt(2*np.pi)) * sigmam)) * np.exp(-(x - m0)*(x - m0)/(2*sigmam*sigmam) )
     #print(xdata, yfit)
     
-    ax0.hist(bc, bins=be, weights=hist, histtype='step', linewidth=1, label="Observed distribution")
+    ax0.hist(bc, bins=be, weights=hist, color='b', ls='-', histtype='step', linewidth=1, label="Observed")
     #ax0.hist(xdata, bins=be, weights=hist2, histtype='step', linewidth=1, label="Corrected distribution")
-    ax0.hist(xdata2, bins=be, weights=hist3, histtype='step', linewidth=1, label="Corrected distribution")
-    ax0.plot(x, yfit, 'r--', label="Observed model")
+    ax0.hist(xdata2, bins=be, weights=hist3, histtype='step', color='g', ls='--',linewidth=1, label="Corrected")
+    ax0.plot(x, yfit, 'r-', label="Fit")
     #ax0.plot(x, yfunct, 'r', label="Underlying distribution")
     #ax0.plot(xdata, 70*(1 - (alpha * (xdata - m50)) / np.sqrt(1 + alpha * alpha * (xdata - m50) * (xdata - m50))), ls="--")
     ax0.legend(loc=2)
+    fig.savefig("../doc/images/underlying.pdf", bbox_inches='tight')
 
 def updateRaAndDec(g, cat):
     t = 1.5 / (3600.)

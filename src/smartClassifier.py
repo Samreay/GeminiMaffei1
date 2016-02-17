@@ -5,7 +5,7 @@ import matplotlib, matplotlib.pyplot as plt
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.tree import DecisionTreeClassifier
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-
+from helper import *
 
 class SmartClassifier(object):
     """ Actually still extremely dumb """
@@ -137,6 +137,8 @@ class SmartClassifier(object):
         extendedMags = other[:,2]
         extendedHLRs = other[:,3]
         magOffset = 2.6 + 2.082443
+        magOffset += 2.5 * np.log10(10)
+        #magOffset += correctZAirMass(1.6434 - 1.31)
         minMag = max(extendedMags.min(), 11)+magOffset
         maxMag = min(extendedMags.max(), 17)+magOffset
         minHLR = max(extendedHLRs.min(),1)
